@@ -1,0 +1,19 @@
+(test
+ (name test_thumper)
+ (modules test_thumper)
+ (libraries thumper windtrap))
+
+(test
+ (name test_check)
+ (modules test_check)
+ (libraries thumper windtrap))
+
+(test
+ (name test_baseline)
+ (modules test_baseline)
+ (libraries thumper windtrap))
+
+(test
+ (name test_ols)
+ (modules test_ols)
+ (libraries thumper windtrap))

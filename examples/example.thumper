@@ -1,0 +1,25 @@
+# thumper baseline
+# version: 1
+# suite_name: example
+# host: 3b8ae6dbe74c4269
+# cpu: Apple M1 Max
+# ocaml: 5.4.1
+# git: b20d5e5
+# dirty: true
+# command: ./bench_example.exe -q
+
+allocation/list_100	alloc_words	3.000000e+02	3.000000e+02	3.000000e+02	0.000000e+00	10	0
+allocation/list_100	cpu_time	2.012768e-07	1.998819e-07	2.031934e-07	8.226227e-03	10	0
+allocation/list_100	wall_time	2.013691e-07	1.997072e-07	2.030479e-07	8.294920e-03	10	0
+allocation/list_1000	alloc_words	3.000000e+03	3.000000e+03	3.000000e+03	0.000000e+00	10	0
+allocation/list_1000	cpu_time	2.032162e-06	2.030034e-06	2.034500e-06	1.098739e-03	10	0
+allocation/list_1000	wall_time	2.032690e-06	2.030792e-06	2.035187e-06	1.081204e-03	10	0
+fib_10	alloc_words	0.000000e+00	0.000000e+00	0.000000e+00	inf	10	0
+fib_10	cpu_time	6.453507e-09	6.446590e-09	6.460486e-09	1.076671e-03	10	1
+fib_10	wall_time	6.456152e-09	6.448171e-09	6.465104e-09	1.311385e-03	10	0
+fib_20	alloc_words	0.000000e+00	0.000000e+00	0.000000e+00	inf	10	0
+fib_20	cpu_time	1.072905e-08	1.071494e-08	1.074706e-08	1.496547e-03	10	1
+fib_20	wall_time	1.073179e-08	1.071703e-08	1.075292e-08	1.672479e-03	10	1
+fib_30	alloc_words	0.000000e+00	0.000000e+00	0.000000e+00	inf	10	0
+fib_30	cpu_time	1.502584e-08	1.500783e-08	1.505252e-08	1.487174e-03	10	1
+fib_30	wall_time	1.503383e-08	1.501620e-08	1.506826e-08	1.731490e-03	10	1

@@ -1,0 +1,10 @@
+(executable
+ (name bench_example)
+ (libraries thumper))
+
+(rule
+ (alias runtest)
+ (action
+  (progn
+   (run %{exe:bench_example.exe} -q)
+   (diff? example.thumper example.thumper.corrected))))

@@ -1,0 +1,17 @@
+(library
+ (name thumper)
+ (public_name thumper)
+ (libraries unix thumper_clock)
+ (private_modules
+  baseline
+  budget
+  check
+  config
+  metric
+  ols
+  run
+  sampler
+  table
+  thumper_cli
+  thumper_output
+  thumper_tsv))
