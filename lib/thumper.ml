@@ -160,8 +160,8 @@ let bench_with_setup ?id ?tags ?note ?metrics ?budgets ~setup
           });
     }
 
-let bench_staged ?id ?tags ?note ?metrics ?budgets name ~init ~setup ~run
-    ~teardown ~fini =
+let bench_staged ?id ?tags ?note ?metrics ?budgets ~init ?(fini = ignore) ~setup
+    ?(teardown = fun _ _ -> ()) name f =
   Case
     {
       id;
@@ -183,7 +183,7 @@ let bench_staged ?id ?tags ?note ?metrics ?budgets name ~init ~setup ~run
                 | None -> ()
                 | Some sample ->
                     for _ = 1 to n do
-                      ignore (Sys.opaque_identity (run env sample))
+                      ignore (Sys.opaque_identity (f env sample))
                     done);
             after_batch =
               (fun () ->

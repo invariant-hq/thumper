@@ -35,13 +35,13 @@ let staged_excludes_setup_teardown () =
     ~argv:[| "test"; "--explore"; "--csv"; csv_path; "--quick" |]
     "boundary"
     [
-      Thumper.bench_staged "staged_alloc"
+      Thumper.bench_staged
         ~init:(fun () -> ())
         ~setup:(fun () -> Sys.opaque_identity (Array.make 50_000 0))
-        ~run:(fun () _sample -> Sys.opaque_identity (Array.make 5 0))
         ~teardown:(fun () _sample ->
           ignore (Sys.opaque_identity (Array.make 50_000 0)))
-        ~fini:(fun () -> ());
+        "staged_alloc"
+        (fun () _sample -> Sys.opaque_identity (Array.make 5 0));
     ];
   let ic = open_in csv_path in
   Fun.protect

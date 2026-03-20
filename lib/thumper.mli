@@ -476,18 +476,20 @@ val bench_staged :
   ?note:string ->
   ?metrics:Metric.t list ->
   ?budgets:Budget.t list ->
-  string ->
   init:(unit -> 'env) ->
+  ?fini:('env -> unit) ->
   setup:('env -> 'sample) ->
-  run:('env -> 'sample -> 'a) ->
-  teardown:('env -> 'sample -> unit) ->
-  fini:('env -> unit) ->
+  ?teardown:('env -> 'sample -> unit) ->
+  string ->
+  ('env -> 'sample -> 'a) ->
   bench
-(** Full benchmark lifecycle.
+(** [bench_staged ~init ~setup name f] measures [f env sample].
 
     - [init]/[fini] run once per worker process.
     - [setup]/[teardown] run per measured batch, outside measurement.
-    - Only [run] is timed. *)
+    - Only [f] is timed.
+
+    [fini] defaults to [ignore]. [teardown] defaults to [fun _ _ -> ()]. *)
 
 val bench_param :
   ?id_prefix:string ->
