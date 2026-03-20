@@ -195,6 +195,42 @@ let warmup ~config ~batch_size (prepared : prepared) =
     runs := !runs + batch_size
   done
 
+(* R² of y = a + b*x fit.  O(n), no allocation beyond the input array. *)
+let r_square_fit metric samples =
+  let pairs =
+    List.filter_map
+      (fun (s : Run.sample) ->
+        match Metric.find_metric metric s.metrics with
+        | Some agg -> Some (float_of_int s.runs, agg)
+        | None -> None)
+      samples
+    |> Array.of_list
+  in
+  let n = Array.length pairs in
+  if n < 3 then 0.0
+  else
+    let fn = float_of_int n in
+    let sum f = Array.fold_left (fun acc p -> acc +. f p) 0.0 pairs in
+    let mx = sum (fun (x, _) -> x) /. fn in
+    let my = sum (fun (_, y) -> y) /. fn in
+    let sxx = sum (fun (x, _) -> (x -. mx) *. (x -. mx)) in
+    if sxx < 1e-30 then 0.0
+    else
+      let sxy = sum (fun (x, y) -> (x -. mx) *. (y -. my)) in
+      let b = sxy /. sxx in
+      let a = my -. (b *. mx) in
+      let ss_res =
+        sum (fun (x, y) ->
+            let r = y -. a -. (b *. x) in
+            r *. r)
+      in
+      let ss_tot =
+        sum (fun (_, y) ->
+            let d = y -. my in
+            d *. d)
+      in
+      if ss_tot < 1e-30 then 1.0 else 1.0 -. (ss_res /. ss_tot)
+
 let converged ~config ~primary_metric samples =
   match Config.get_target_rel_ci config with
   | None -> true
@@ -215,8 +251,9 @@ let converged ~config ~primary_metric samples =
           let m, _lower, upper = confidence_interval_95 values in
           if Float.abs m < 1e-30 then false
           else
-            let rel_ci = (upper -. m) /. Float.abs m in
-            rel_ci <= target
+            let ci_ok = (upper -. m) /. Float.abs m <= target in
+            let r2_ok = r_square_fit primary_metric samples >= 0.99 in
+            ci_ok && r2_ok
 
 (* Use OLS regression to estimate per-call cost.
    Model: total = β₁ * runs + β₀ (overhead intercept).
