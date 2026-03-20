@@ -11,8 +11,8 @@
     let () =
       Thumper.run "parser"
         [
-          Thumper.bench "json" (fun () -> ignore (parse input));
-          Thumper.bench "xml" (fun () -> ignore (parse_xml input));
+          Thumper.bench "json" (fun () -> parse input);
+          Thumper.bench "xml" (fun () -> parse_xml input);
         ]
     ]}
 
@@ -502,8 +502,6 @@ val group :
     [metrics] and [budgets] are inherited by children unless overridden. *)
 
 val black_box : 'a -> 'a
-(** [black_box x] is [x], opaque to the compiler. Prevents dead-code elimination
-    of the benchmarked computation. *)
-
-val consume : 'a -> unit
-(** [consume x] discards [x] opaquely. Equivalent to [ignore (black_box x)]. *)
+(** [black_box x] is [x], opaque to the compiler. Useful for preventing
+    constant-folding of benchmark inputs. Not needed for results — the framework
+    already wraps each call in [Sys.opaque_identity]. *)

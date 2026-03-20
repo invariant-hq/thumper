@@ -109,7 +109,6 @@ let resolve ~config s =
 (* Optimization barriers *)
 
 let black_box x = Sys.opaque_identity x
-let consume x = ignore (Sys.opaque_identity x)
 
 (* Benchmark constructors *)
 

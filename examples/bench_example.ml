@@ -15,14 +15,12 @@ let fib n =
 let () =
   Thumper.run "example"
     [
-      Thumper.bench "fib 10" (fun () -> Thumper.consume (fib 10));
-      Thumper.bench "fib 20" (fun () -> Thumper.consume (fib 20));
-      Thumper.bench "fib 30" (fun () -> Thumper.consume (fib 30));
+      Thumper.bench "fib 10" (fun () -> fib 10);
+      Thumper.bench "fib 20" (fun () -> fib 20);
+      Thumper.bench "fib 30" (fun () -> fib 30);
       Thumper.group "allocation"
         [
-          Thumper.bench "list 100" (fun () ->
-              Thumper.consume (List.init 100 Fun.id));
-          Thumper.bench "list 1000" (fun () ->
-              Thumper.consume (List.init 1000 Fun.id));
+          Thumper.bench "list 100" (fun () -> List.init 100 Fun.id);
+          Thumper.bench "list 1000" (fun () -> List.init 1000 Fun.id);
         ];
     ]

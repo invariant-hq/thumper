@@ -9,10 +9,6 @@ let black_box_test () =
   let x = Thumper.black_box 42 in
   equal int 42 x
 
-let consume_test () =
-  Thumper.consume 42;
-  is_true true
-
 let bench_constructors () =
   let _b = Thumper.bench "noop" (fun () -> ()) in
   let _g = Thumper.group "grp" [ Thumper.bench "a" (fun () -> ()) ] in
@@ -71,7 +67,6 @@ let () =
       group "core"
         [
           test "black_box" black_box_test;
-          test "consume" consume_test;
           test "bench constructors" bench_constructors;
         ];
       group "measurement boundary"
