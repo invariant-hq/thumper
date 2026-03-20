@@ -197,17 +197,28 @@ let bench_staged ?id ?tags ?note ?metrics ?budgets name ~init ~setup ~run
     }
 
 let bench_param ?id_prefix ?tags ?note ?metrics ?budgets name ~params ~f =
-  List.map
-    (fun (param_name, param_value) ->
-      let bench_name = Printf.sprintf "%s[%s]" name param_name in
-      let id =
-        match id_prefix with
-        | Some prefix -> Some (Printf.sprintf "%s[%s]" prefix param_name)
-        | None -> None
-      in
-      bench ?id ?tags ?note ?metrics ?budgets bench_name (fun () ->
-          f param_value))
-    params
+  let children =
+    List.map
+      (fun (param_name, param_value) ->
+        let bench_name = Printf.sprintf "%s[%s]" name param_name in
+        let id =
+          match id_prefix with
+          | Some prefix -> Some (Printf.sprintf "%s[%s]" prefix param_name)
+          | None -> None
+        in
+        bench ?id ?tags ?note ?metrics ?budgets bench_name (fun () ->
+            f param_value))
+      params
+  in
+  Group
+    {
+      id = id_prefix;
+      name;
+      tags = Option.value ~default:[] tags;
+      metrics;
+      budgets;
+      children;
+    }
 
 let group ?id ?tags ?metrics ?budgets name children =
   Group

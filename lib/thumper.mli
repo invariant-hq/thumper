@@ -486,9 +486,9 @@ val bench_param :
   string ->
   params:(string * 'a) list ->
   f:('a -> 'b) ->
-  bench list
-(** [bench_param name ~params ~f] is one benchmark per entry in [params], named
-    ["name[label]"]. *)
+  bench
+(** [bench_param name ~params ~f] is a group with one benchmark per entry in
+    [params], named ["name[label]"]. *)
 
 val group :
   ?id:string ->
