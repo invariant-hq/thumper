@@ -31,7 +31,7 @@ type t = {
 let default =
   {
     profile = None;
-    metrics = [ Metric.cpu_time; Metric.wall_time; Metric.alloc_words ];
+    metrics = [ Metric.wall_time; Metric.cpu_time; Metric.alloc_words ];
     budgets = [];
     warmup_time = 0.5;
     warmup_runs = 3;
