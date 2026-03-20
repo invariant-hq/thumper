@@ -558,7 +558,7 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
       in
       let has_baseline = baseline <> None in
       let n_inc = if baseline = None then 0 else !n_inconclusive in
-      Thumper_output.pp_compact_results ~show_failures:(not has_baseline)
+      Thumper_output.pp_compact_results ~show_failures:has_baseline
         Format.err_formatter !failures ~n_inconclusive:n_inc
         ~n_improved:!n_improved total;
       Thumper_output.emit_github_annotations check_result;
