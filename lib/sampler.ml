@@ -217,8 +217,7 @@ let converged ~config ~primary_metric samples =
             rel_ci <= target
 
 (* Use OLS regression to estimate per-call cost.
-   For allocation metrics: model = β₁ * runs + β₀ (overhead term).
-   For timing metrics: model = β₁ * runs.
+   Model: total = β₁ * runs + β₀ (overhead intercept).
    β₁ is the per-call estimate. Bootstrap gives CI. *)
 let compute_estimate metric samples =
   let is_alloc = String.equal (Metric.units metric) "words" in
@@ -263,16 +262,10 @@ let compute_estimate metric samples =
   else
     (* Build predictor matrix and response vector *)
     let predictors =
-      if is_alloc then
-        (* [runs, 1] — overhead term for allocation noise *)
-        Array.init n (fun i ->
-            let runs, _ = pairs.(i) in
-            [| runs; 1.0 |])
-      else
-        (* [runs] — no overhead term for timing *)
-        Array.init n (fun i ->
-            let runs, _ = pairs.(i) in
-            [| runs |])
+      (* [runs, 1] — overhead intercept for all metrics *)
+      Array.init n (fun i ->
+          let runs, _ = pairs.(i) in
+          [| runs; 1.0 |])
     in
     let response = Array.init n (fun i -> snd pairs.(i)) in
     let per_call_values =
@@ -362,10 +355,9 @@ let measure_case ~config (rc : resolved_case) =
       let total_runs = ref 0 in
       let n = ref 0 in
       while
-        !n < min_s
-        || !n < max_s
-           && now () -. start < max_t
-           && not (converged ~config ~primary_metric !samples)
+        now () -. start < max_t
+        && (!n < min_s
+           || (!n < max_s && not (converged ~config ~primary_metric !samples)))
       do
         (* Stabilize GC between samples (skip first — already done above). *)
         if !n > 0 then gc_stabilize config;

@@ -36,16 +36,16 @@ let default =
     warmup_time = 0.5;
     warmup_runs = 3;
     sample_time = 0.01;
-    min_samples = 10;
+    min_samples = 15;
     max_samples = 300;
     max_time = 10.0;
     target_rel_ci = Some 0.02;
     fork_policy = `Never;
-    gc_policy = `Major;
+    gc_policy = `Compact;
     env_policy = `Warn;
     fail_on_inconclusive = false;
     fail_on_missing_baseline = false;
-    geometric_scale = 1.05;
+    geometric_scale = 1.2;
     no_compactions = false;
   }
 
@@ -75,6 +75,7 @@ let ci =
     env_policy = `Fail;
     fail_on_inconclusive = true;
     fail_on_missing_baseline = true;
+    geometric_scale = 1.1;
   }
 
 let deterministic =
@@ -85,6 +86,7 @@ let deterministic =
     max_samples = 2000;
     max_time = 60.0;
     target_rel_ci = Some 0.005;
+    geometric_scale = 1.05;
   }
 
 let stability s t =
