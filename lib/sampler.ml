@@ -392,7 +392,6 @@ let measure_case ~config (rc : resolved_case) =
       let min_s = Config.get_min_samples config in
       let max_s = Config.get_max_samples config in
       let max_t = Config.get_max_time config in
-      let total_runs = ref 0 in
       let n = ref 0 in
       while
         now () -. start < max_t
@@ -421,13 +420,10 @@ let measure_case ~config (rc : resolved_case) =
             metrics meters
         in
         samples := { Run.runs = bs; metrics = metric_values } :: !samples;
-        total_runs := !total_runs + bs;
         incr n;
-        (* Geometric batch scaling, capped to avoid overshooting max_samples *)
+        (* Geometric batch scaling *)
         let next = int_of_float (float bs *. geo) in
-        let next = max (bs + 1) next in
-        let remaining = max_s - !total_runs in
-        batch_size := if remaining > 0 then min next remaining else next
+        batch_size := max (bs + 1) next
       done;
       let samples = List.rev !samples in
       let estimates =
