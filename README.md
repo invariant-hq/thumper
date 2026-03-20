@@ -21,9 +21,9 @@ let fib n =
 let () =
   Thumper.run "fib"
     [
-      Thumper.bench "fib 10" (fun () -> Thumper.consume (fib 10));
-      Thumper.bench "fib 20" (fun () -> Thumper.consume (fib 20));
-      Thumper.bench "fib 30" (fun () -> Thumper.consume (fib 30));
+      Thumper.bench "fib 10" (fun () -> fib 10);
+      Thumper.bench "fib 20" (fun () -> fib 20);
+      Thumper.bench "fib 30" (fun () -> fib 30);
     ]
 ```
 
@@ -50,7 +50,7 @@ $ cp _build/default/bench/fib.thumper bench/fib.thumper
 $ git add bench/fib.thumper         # commit the baseline
 
 $ dune runtest                      # subsequent runs check against it
-5 benchmarks, 0 regressions.
+3 benchmarks, 0 regressions.
 
 $ dune runtest                      # if a benchmark improves, dune shows a diff
 $ dune promote                     # accept the improvement
@@ -70,7 +70,7 @@ $ dune promote                     # accept the improvement
 
 **Presets:** `--quick` (2s, fast feedback), `--ci` (30s, tight CI), `--deterministic` (60s, allocation-first)
 
-**Output:** `-q` (compact: `.` pass, `R` regress, `I` improved, `?` inconclusive), `--csv FILE`, `--color MODE`
+**Output:** `-q` (compact: `.` pass, `↓` regress, `↑` improved, `?` inconclusive), `--csv FILE`, `--color MODE`
 
 **Other:** `--baseline FILE`, `--profile NAME`, `-h`, `-V`
 
