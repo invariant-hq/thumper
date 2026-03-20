@@ -334,7 +334,7 @@ let compute_estimate metric samples =
         let point = coeffs.(0) in
         (* Bootstrap CI on the per-call coefficient *)
         let lower, upper =
-          match Ols.bootstrap_ci ~trials:300 ~predictors ~response with
+          match Ols.bootstrap_ci ~trials:3000 ~predictors ~response with
           | Ok cis ->
               let lo, hi = cis.(0) in
               (lo, hi)
