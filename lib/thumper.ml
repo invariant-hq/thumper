@@ -135,8 +135,8 @@ let bench ?id ?tags ?note ?metrics ?budgets name f =
           });
     }
 
-let bench_with_setup ?id ?tags ?note ?metrics ?budgets ?teardown name ~setup
-    ~run =
+let bench_with_setup ?id ?tags ?note ?metrics ?budgets ~setup
+    ?(teardown = ignore) name f =
   Case
     {
       id;
@@ -153,10 +153,10 @@ let bench_with_setup ?id ?tags ?note ?metrics ?budgets ?teardown name ~setup
             run_batch =
               (fun n ->
                 for _ = 1 to n do
-                  ignore (Sys.opaque_identity (run env))
+                  ignore (Sys.opaque_identity (f env))
                 done);
             after_batch = ignore;
-            cleanup = (fun () -> Option.iter (fun f -> f env) teardown);
+            cleanup = (fun () -> teardown env);
           });
     }
 

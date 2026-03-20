@@ -449,14 +449,26 @@ val bench_with_setup :
   ?note:string ->
   ?metrics:Metric.t list ->
   ?budgets:Budget.t list ->
+  setup:(unit -> 'env) ->
   ?teardown:('env -> unit) ->
   string ->
-  setup:(unit -> 'env) ->
-  run:('env -> 'a) ->
+  ('env -> 'a) ->
   bench
-(** [bench_with_setup name ~setup ~run] measures [run env] where [env] is
-    produced by [setup]. Both [setup] and [teardown] run outside the measured
-    region, once per worker process. *)
+(** [bench_with_setup ~setup name f] measures [f env] where [env] is produced by
+    [setup]. Both [setup] and [teardown] run outside the measured region, once
+    per worker process.
+
+    Partial application creates reusable constructors:
+    {[
+    let with_data =
+      bench_with_setup
+        ~setup:(fun () -> load "data.json")
+        group "Parsers"
+        [
+          with_data "json" (fun data -> parse_json data);
+          with_data "xml" (fun data -> parse_xml data);
+        ]
+    ]} *)
 
 val bench_staged :
   ?id:string ->
