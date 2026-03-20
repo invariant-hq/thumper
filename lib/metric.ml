@@ -13,13 +13,13 @@ module type Probe = sig
   val units : string
   val direction : direction
   val sample : unit -> snapshot
-  val diff : before:snapshot -> after:snapshot -> runs:int -> float
+  val diff : before:snapshot -> after:snapshot -> float
 end
 
 type erased_probe =
   | EP : {
       sample : unit -> 'a;
-      diff : before:'a -> after:'a -> runs:int -> float;
+      diff : before:'a -> after:'a -> float;
     }
       -> erased_probe
 
@@ -60,8 +60,7 @@ let cpu_time =
            (fun () ->
              let t = Unix.times () in
              t.Unix.tms_utime +. t.Unix.tms_stime);
-         diff =
-           (fun ~before ~after ~runs -> (after -. before) /. float_of_int runs);
+         diff = (fun ~before ~after -> after -. before);
        })
 
 let wall_time =
@@ -70,9 +69,8 @@ let wall_time =
        {
          sample = (fun () -> Thumper_clock.now_ns ());
          diff =
-           (fun ~before ~after ~runs ->
-             Int64.to_float (Int64.sub after before)
-             *. 1e-9 /. float_of_int runs);
+           (fun ~before ~after ->
+             Int64.to_float (Int64.sub after before) *. 1e-9);
        })
 
 (* Allocation metrics use Gc.counters() — a single cheap call that
@@ -80,29 +78,27 @@ let wall_time =
 
 let alloc_words =
   let sample () = Gc.counters () in
-  let diff ~before:(bm, bp, bj) ~after:(am, ap, aj) ~runs =
+  let diff ~before:(bm, bp, bj) ~after:(am, ap, aj) =
     let before_total = bm +. bj -. bp in
     let after_total = am +. aj -. ap in
-    (after_total -. before_total) /. float_of_int runs
+    after_total -. before_total
   in
   make ~name:"Alloc" ~kind:`Allocation "alloc_words" "words" `Lower_is_better
     (EP { sample; diff })
 
 let minor_alloc_words =
   let sample () = Gc.counters () in
-  let diff ~before:(bm, _, _) ~after:(am, _, _) ~runs =
-    (am -. bm) /. float_of_int runs
-  in
+  let diff ~before:(bm, _, _) ~after:(am, _, _) = am -. bm in
   make ~name:"mWd" ~kind:`Allocation "minor_alloc_words" "words"
     `Lower_is_better
     (EP { sample; diff })
 
 let major_alloc_words =
   let sample () = Gc.counters () in
-  let diff ~before:(_, bp, bj) ~after:(_, ap, aj) ~runs =
+  let diff ~before:(_, bp, bj) ~after:(_, ap, aj) =
     let before_direct = bj -. bp in
     let after_direct = aj -. ap in
-    (after_direct -. before_direct) /. float_of_int runs
+    after_direct -. before_direct
   in
   make ~name:"mjWd" ~kind:`Allocation "major_alloc_words" "words"
     `Lower_is_better
@@ -110,35 +106,27 @@ let major_alloc_words =
 
 let promoted_words =
   let sample () = Gc.counters () in
-  let diff ~before:(_, bp, _) ~after:(_, ap, _) ~runs =
-    (ap -. bp) /. float_of_int runs
-  in
+  let diff ~before:(_, bp, _) ~after:(_, ap, _) = ap -. bp in
   make ~name:"Prom" ~kind:`Allocation "promoted_words" "words" `Lower_is_better
     (EP { sample; diff })
 
 let minor_collections =
   let sample () = (Gc.quick_stat ()).Gc.minor_collections in
-  let diff ~before ~after ~runs =
-    float_of_int (after - before) /. float_of_int runs
-  in
+  let diff ~before ~after = float_of_int (after - before) in
   make ~name:"mGC" ~kind:`Allocation "minor_collections" "collections"
     `Lower_is_better
     (EP { sample; diff })
 
 let major_collections =
   let sample () = (Gc.quick_stat ()).Gc.major_collections in
-  let diff ~before ~after ~runs =
-    float_of_int (after - before) /. float_of_int runs
-  in
+  let diff ~before ~after = float_of_int (after - before) in
   make ~name:"mjGC" ~kind:`Allocation "major_collections" "collections"
     `Lower_is_better
     (EP { sample; diff })
 
 let compactions =
   let sample () = (Gc.quick_stat ()).Gc.compactions in
-  let diff ~before ~after ~runs =
-    float_of_int (after - before) /. float_of_int runs
-  in
+  let diff ~before ~after = float_of_int (after - before) in
   make ~name:"Comp" ~kind:`Allocation "compactions" "compactions"
     `Lower_is_better
     (EP { sample; diff })
@@ -151,7 +139,7 @@ let cycles =
     (EP
        {
          sample = (fun () -> ());
-         diff = (fun ~before:() ~after:() ~runs:_ -> Float.nan);
+         diff = (fun ~before:() ~after:() -> Float.nan);
        })
 
 let instructions =
@@ -159,7 +147,7 @@ let instructions =
     (EP
        {
          sample = (fun () -> ());
-         diff = (fun ~before:() ~after:() ~runs:_ -> Float.nan);
+         diff = (fun ~before:() ~after:() -> Float.nan);
        })
 
 let of_probe ?(kind = `Other) (module P : Probe) =
@@ -171,7 +159,7 @@ let of_probe ?(kind = `Other) (module P : Probe) =
 type meter = {
   before_fn : unit -> unit;
   after_fn : unit -> unit;
-  result_fn : int -> float;
+  result_fn : unit -> float;
 }
 
 let create_meter t =
@@ -182,15 +170,15 @@ let create_meter t =
     before_fn = (fun () -> snap_before := Some (sample ()));
     after_fn = (fun () -> snap_after := Some (sample ()));
     result_fn =
-      (fun runs ->
+      (fun () ->
         match (!snap_before, !snap_after) with
-        | Some b, Some a -> diff ~before:b ~after:a ~runs
+        | Some b, Some a -> diff ~before:b ~after:a
         | _ -> Float.nan);
   }
 
 let meter_before m = m.before_fn ()
 let meter_after m = m.after_fn ()
-let meter_result m runs = m.result_fn runs
+let meter_result m = m.result_fn ()
 
 let find_metric m pairs =
   List.find_map (fun (k, v) -> if equal k m then Some v else None) pairs

@@ -45,7 +45,7 @@ let test_custom_probe_kind () =
         let units = "s"
         let direction = `Lower_is_better
         let sample () = ()
-        let diff ~before:() ~after:() ~runs:_ = 0.0
+        let diff ~before:() ~after:() = 0.0
       end)
   in
   equal kind `Time (Thumper.Metric.kind m)

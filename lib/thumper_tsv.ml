@@ -38,7 +38,7 @@ let resolve_metric_by_id id =
           let units = "?"
           let direction = `Lower_is_better
           let sample () = ()
-          let diff ~before:() ~after:() ~runs:_ = Float.nan
+          let diff ~before:() ~after:() = Float.nan
         end)
 
 let write_estimate oc ~case_id ~metric_id ~point ~lower ~upper ~rel_ci ~samples

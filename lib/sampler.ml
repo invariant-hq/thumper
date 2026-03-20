@@ -204,7 +204,9 @@ let converged ~config ~primary_metric samples =
         let values =
           List.filter_map
             (fun (s : Run.sample) ->
-              Metric.find_metric primary_metric s.metrics)
+              match Metric.find_metric primary_metric s.metrics with
+              | Some agg -> Some (agg /. float_of_int s.runs)
+              | None -> None)
             samples
           |> Array.of_list
         in
@@ -221,14 +223,12 @@ let converged ~config ~primary_metric samples =
    β₁ is the per-call estimate. Bootstrap gives CI. *)
 let compute_estimate metric samples =
   let is_alloc = String.equal (Metric.units metric) "words" in
-  (* Extract (runs, total_metric_value) pairs *)
+  (* Extract (runs, aggregate) pairs *)
   let pairs =
     List.filter_map
       (fun (s : Run.sample) ->
         match Metric.find_metric metric s.metrics with
-        | Some per_call ->
-            (* Reconstruct total value from per-call × runs *)
-            Some (float_of_int s.runs, per_call *. float_of_int s.runs)
+        | Some agg -> Some (float_of_int s.runs, agg)
         | None -> None)
       samples
     |> Array.of_list
@@ -238,7 +238,10 @@ let compute_estimate metric samples =
     (* Fallback to simple mean if too few samples for OLS *)
     let values =
       List.filter_map
-        (fun (s : Run.sample) -> Metric.find_metric metric s.metrics)
+        (fun (s : Run.sample) ->
+          match Metric.find_metric metric s.metrics with
+          | Some agg -> Some (agg /. float_of_int s.runs)
+          | None -> None)
         samples
       |> Array.of_list
     in
@@ -377,7 +380,7 @@ let measure_case ~config (rc : resolved_case) =
         Gc.set old_gc;
         let metric_values =
           List.map2
-            (fun m meter -> (m, Metric.meter_result meter bs))
+            (fun m meter -> (m, Metric.meter_result meter))
             metrics meters
         in
         samples := { Run.runs = bs; metrics = metric_values } :: !samples;

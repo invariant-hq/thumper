@@ -109,7 +109,7 @@ module Metric : sig
     val units : string
     val direction : direction
     val sample : unit -> snapshot
-    val diff : before:snapshot -> after:snapshot -> runs:int -> float
+    val diff : before:snapshot -> after:snapshot -> float
   end
 
   val of_probe : ?kind:kind -> (module Probe) -> t

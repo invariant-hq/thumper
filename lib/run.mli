@@ -22,7 +22,7 @@ type metadata = {
 
 type sample = {
   runs : int;  (** Calls in this batch. *)
-  metrics : (Metric.t * float) list;  (** Per-call values. *)
+  metrics : (Metric.t * float) list;  (** Raw aggregate values. *)
 }
 
 type estimate = {

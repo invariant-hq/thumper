@@ -52,7 +52,7 @@ module type Probe = sig
   val units : string
   val direction : direction
   val sample : unit -> snapshot
-  val diff : before:snapshot -> after:snapshot -> runs:int -> float
+  val diff : before:snapshot -> after:snapshot -> float
 end
 
 val of_probe : ?kind:kind -> (module Probe) -> t
@@ -69,8 +69,8 @@ val create_meter : t -> meter
 val meter_before : meter -> unit
 val meter_after : meter -> unit
 
-val meter_result : meter -> int -> float
-(** [meter_result m runs] is the per-call value from the last before/after pair.
+val meter_result : meter -> float
+(** [meter_result m] is the raw aggregate value from the last before/after pair.
 *)
 
 val find_metric : t -> (t * float) list -> float option
