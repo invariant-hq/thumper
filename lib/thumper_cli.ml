@@ -16,6 +16,7 @@ type t = {
   baseline : string option;
   profile : string option;
   csv : string option;
+  json : string option;
   quiet : bool;
   list_only : bool;
   color : string option;
@@ -55,7 +56,9 @@ let print_help prog_name =
   Printf.printf
     "    --deterministic    Strongest stability preset (60s max, 0.5%% CI)\n\n";
   Printf.printf "OUTPUT:\n";
-  Printf.printf "    --csv FILE         Write CSV of estimates\n\n";
+  Printf.printf "    --csv FILE         Write CSV of estimates\n";
+  Printf.printf
+    "    --json FILE        Write JSON verdict (check mode only)\n\n";
   Printf.printf "OTHER:\n";
   Printf.printf "    --baseline FILE    Override baseline file path\n";
   Printf.printf
@@ -96,6 +99,7 @@ let parse argv =
   let baseline = ref None in
   let profile = ref None in
   let csv = ref None in
+  let json = ref None in
   let quiet = ref false in
   let list_only = ref false in
   let color = ref None in
@@ -169,6 +173,10 @@ let parse argv =
         csv := Some file;
         parse_args rest
     | "--csv" :: [] -> set_error "thumper: --csv requires an argument"
+    | "--json" :: file :: rest ->
+        json := Some file;
+        parse_args rest
+    | "--json" :: [] -> set_error "thumper: --json requires an argument"
     | "--color" :: m :: rest ->
         color := Some m;
         parse_args rest
@@ -207,6 +215,7 @@ let parse argv =
         baseline = !baseline;
         profile = !profile;
         csv = !csv;
+        json = !json;
         quiet = !quiet;
         list_only = !list_only;
         color = !color;

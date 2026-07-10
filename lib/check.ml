@@ -327,6 +327,80 @@ let check ~config ~budgets:budget_map ~baseline run =
   in
   { overall; run; baseline; cases = check_results }
 
+(* Per-metric aggregation *)
+
+type metric_summary = {
+  metric : Metric.t;
+  n_improved : int;
+  n_regressed : int;
+  n_equivalent : int;
+  n_inconclusive : int;
+  geomean_delta : float option;
+}
+
+let summary t =
+  let metrics =
+    let seen = Hashtbl.create 8 in
+    List.concat_map
+      (fun (c : case_result) ->
+        List.filter_map
+          (fun (mr : metric_result) ->
+            let id = Metric.id mr.metric in
+            if Hashtbl.mem seen id then None
+            else begin
+              Hashtbl.add seen id ();
+              Some mr.metric
+            end)
+          c.metrics)
+      t.cases
+  in
+  List.map
+    (fun metric ->
+      let results =
+        List.filter_map
+          (fun (c : case_result) ->
+            List.find_opt
+              (fun (mr : metric_result) -> Metric.equal mr.metric metric)
+              c.metrics)
+          t.cases
+      in
+      let n_improved = ref 0
+      and n_regressed = ref 0
+      and n_equivalent = ref 0
+      and n_inconclusive = ref 0 in
+      let sum_log = ref 0.0 and n_delta = ref 0 in
+      List.iter
+        (fun (mr : metric_result) ->
+          (match mr.relation with
+          | Some Improved -> incr n_improved
+          | Some Regressed -> incr n_regressed
+          | Some (Equivalent | Changed_within_budget) -> incr n_equivalent
+          | None -> incr n_inconclusive);
+          match mr.delta with
+          | Some d ->
+              (* Geomean over the strictly-positive ratios [1 + delta], never
+                 over the signed deltas. *)
+              let ratio = 1.0 +. d in
+              if Float.is_finite ratio && ratio > 0.0 then begin
+                sum_log := !sum_log +. log ratio;
+                incr n_delta
+              end
+          | None -> ())
+        results;
+      let geomean_delta =
+        if !n_delta = 0 then None
+        else Some (exp (!sum_log /. float_of_int !n_delta) -. 1.0)
+      in
+      {
+        metric;
+        n_improved = !n_improved;
+        n_regressed = !n_regressed;
+        n_equivalent = !n_equivalent;
+        n_inconclusive = !n_inconclusive;
+        geomean_delta;
+      })
+    metrics
+
 (* Output *)
 
 let relation_string = function
@@ -374,3 +448,101 @@ let pp ?(ascii_only = false) fmt t =
 
 let exit_code t =
   match t.overall with `Pass -> 0 | `Fail -> 1 | `Inconclusive -> 2
+
+(* JSON serialisation *)
+
+let json_escape buf s =
+  String.iter
+    (fun c ->
+      match c with
+      | '"' -> Buffer.add_string buf "\\\""
+      | '\\' -> Buffer.add_string buf "\\\\"
+      | '\n' -> Buffer.add_string buf "\\n"
+      | '\r' -> Buffer.add_string buf "\\r"
+      | '\t' -> Buffer.add_string buf "\\t"
+      | c when Char.code c < 0x20 ->
+          Buffer.add_string buf (Printf.sprintf "\\u%04x" (Char.code c))
+      | c -> Buffer.add_char buf c)
+    s
+
+let json_string buf s =
+  Buffer.add_char buf '"';
+  json_escape buf s;
+  Buffer.add_char buf '"'
+
+let json_float buf = function
+  | Some f when Float.is_finite f ->
+      Buffer.add_string buf (Printf.sprintf "%.17g" f)
+  | _ -> Buffer.add_string buf "null"
+
+let json_relation = function
+  | Improved -> "improved"
+  | Equivalent -> "equivalent"
+  | Changed_within_budget -> "changed_within_budget"
+  | Regressed -> "regressed"
+
+let json_reason = function
+  | Missing_baseline -> "missing_baseline"
+  | Missing_metric -> "missing_metric"
+  | Insufficient_evidence -> "insufficient_evidence"
+  | Baseline_too_noisy -> "baseline_too_noisy"
+
+let json_overall = function
+  | `Pass -> "pass"
+  | `Fail -> "fail"
+  | `Inconclusive -> "inconclusive"
+
+let to_json t =
+  let buf = Buffer.create 1024 in
+  Buffer.add_string buf "{\"overall\":";
+  json_string buf (json_overall t.overall);
+  Buffer.add_string buf ",\"summary\":{";
+  List.iteri
+    (fun i (s : metric_summary) ->
+      if i > 0 then Buffer.add_char buf ',';
+      json_string buf (Metric.id s.metric);
+      Buffer.add_string buf
+        (Printf.sprintf
+           ":{\"n_improved\":%d,\"n_regressed\":%d,\"n_equivalent\":%d,\"n_inconclusive\":%d,\"geomean_delta\":"
+           s.n_improved s.n_regressed s.n_equivalent s.n_inconclusive);
+      json_float buf s.geomean_delta;
+      Buffer.add_char buf '}')
+    (summary t);
+  Buffer.add_string buf "},\"cases\":[";
+  List.iteri
+    (fun i (c : case_result) ->
+      if i > 0 then Buffer.add_char buf ',';
+      Buffer.add_string buf "{\"id\":";
+      json_string buf c.id;
+      Buffer.add_string buf ",\"full_name\":";
+      json_string buf c.full_name;
+      Buffer.add_string buf ",\"overall\":";
+      json_string buf (json_overall c.overall);
+      Buffer.add_string buf ",\"metrics\":[";
+      List.iteri
+        (fun j (mr : metric_result) ->
+          if j > 0 then Buffer.add_char buf ',';
+          Buffer.add_string buf "{\"metric\":";
+          json_string buf (Metric.id mr.metric);
+          Buffer.add_string buf ",\"relation\":";
+          (match mr.relation with
+          | Some r -> json_string buf (json_relation r)
+          | None -> Buffer.add_string buf "null");
+          Buffer.add_string buf ",\"status\":";
+          json_string buf (json_overall mr.status);
+          Buffer.add_string buf ",\"reason\":";
+          (match mr.reason with
+          | Some r -> json_string buf (json_reason r)
+          | None -> Buffer.add_string buf "null");
+          Buffer.add_string buf ",\"delta\":";
+          json_float buf mr.delta;
+          Buffer.add_string buf ",\"lower_delta\":";
+          json_float buf mr.lower_delta;
+          Buffer.add_string buf ",\"upper_delta\":";
+          json_float buf mr.upper_delta;
+          Buffer.add_char buf '}')
+        c.metrics;
+      Buffer.add_string buf "]}")
+    t.cases;
+  Buffer.add_string buf "]}";
+  Buffer.contents buf

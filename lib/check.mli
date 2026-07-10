@@ -46,6 +46,18 @@ type case_result = {
   warnings : string list;
 }
 
+type metric_summary = {
+  metric : Metric.t;
+  n_improved : int;  (** Cases whose relation for this metric is [Improved]. *)
+  n_regressed : int;  (** Cases whose relation is [Regressed]. *)
+  n_equivalent : int;
+      (** Cases whose relation is [Equivalent] or [Changed_within_budget]. *)
+  n_inconclusive : int;  (** Cases with no determinable relation. *)
+  geomean_delta : float option;
+      (** Geometric mean of the per-case ratios [candidate / baseline] (over
+          cases with a delta), minus 1; [None] when no case has a delta. *)
+}
+
 type t
 
 (** {1:accessors Accessors} *)
@@ -56,6 +68,11 @@ val cases : t -> case_result list
 val has_regressions : t -> bool
 val has_inconclusive : t -> bool
 
+val summary : t -> metric_summary list
+(** [summary t] aggregates each metric across all cases: counts of cases by the
+    metric's relation and the geometric mean of the per-case ratios. Metrics
+    appear in first-encounter order. *)
+
 val verdict_string : metric_result -> string
 (** Human-readable verdict for a single metric result. *)
 
@@ -65,6 +82,17 @@ val reason_string : no_result_reason -> string
 (** {1:output Output} *)
 
 val pp : ?ascii_only:bool -> Format.formatter -> t -> unit
+
+val to_json : t -> string
+(** [to_json t] serialises the check result as JSON: ["overall"], a per-metric
+    ["summary"] (each metric id → \{ [n_improved]; [n_regressed]; [n_equivalent];
+    [n_inconclusive]; [geomean_delta] \}), and ["cases"] (per case, per metric:
+    relation, status, reason, delta, lower_delta, upper_delta). Per-case [delta]
+    is the fraction [(candidate - baseline) / baseline]. [geomean_delta] is the
+    geometric mean of the per-case ratios [candidate / baseline] (over cases
+    where a delta exists), minus 1 — defined on ratios, not signed deltas, so it
+    stays well-defined when deltas are negative. Non-finite floats and absent
+    options serialise to [null]. *)
 
 val exit_code : t -> int
 (** [0] pass, [1] regression, [2] inconclusive / missing baseline. *)

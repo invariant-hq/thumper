@@ -26,6 +26,19 @@ let make_run_case id estimates : Thumper.Run.case =
 let make_baseline_case id estimates : Thumper.Baseline.case =
   { id; name = id; full_name = id; tags = []; note = None; estimates }
 
+let metadata : Thumper.Run.metadata =
+  {
+    suite_id = None;
+    suite_name = Some "json";
+    profile = None;
+    host_fingerprint = "test";
+    cpu_model = None;
+    ocaml_version = Sys.ocaml_version;
+    git_commit = None;
+    git_dirty = false;
+    command_line = None;
+  }
+
 let config = Thumper.Config.default
 
 let pp_overall fmt = function
@@ -274,6 +287,86 @@ let test_inconclusive_without_flag_exits_2 () =
   in
   equal overall `Inconclusive result.overall
 
+(* --- JSON serialisation tests --- *)
+
+let find_substring s sub =
+  let n = String.length s and m = String.length sub in
+  let rec go i =
+    if i + m > n then None
+    else if String.sub s i m = sub then Some i
+    else go (i + 1)
+  in
+  go 0
+
+let contains s sub = find_substring s sub <> None
+
+let number_after s key =
+  match find_substring s key with
+  | None -> failf "key not found: %s" key
+  | Some i ->
+      let start = i + String.length key in
+      let j = ref start in
+      let n = String.length s in
+      while !j < n && s.[!j] <> ',' && s.[!j] <> '}' do
+        incr j
+      done;
+      float_of_string (String.trim (String.sub s start (!j - start)))
+
+let test_to_json () =
+  let wall = Thumper.Metric.wall_time in
+  let baseline =
+    Thumper.Baseline.of_cases ~metadata
+      ~cases:
+        [
+          make_baseline_case "c1"
+            [ make_estimate wall 1.0 ~lower:0.99 ~upper:1.01 ];
+          make_baseline_case "c2"
+            [ make_estimate wall 1.0 ~lower:0.99 ~upper:1.01 ];
+        ]
+  in
+  let run =
+    Thumper.Run.create ~metadata
+      ~cases:
+        [
+          make_run_case "c1" [ make_estimate wall 0.8 ~lower:0.79 ~upper:0.81 ];
+          make_run_case "c2" [ make_estimate wall 0.9 ~lower:0.89 ~upper:0.91 ];
+        ]
+  in
+  let check =
+    Thumper.Check.check ~config ~budgets:[] ~baseline:(Some baseline) run
+  in
+  let json = Thumper.Check.to_json check in
+  List.iter
+    (fun field ->
+      if not (contains json field) then failf "JSON missing field: %s" field)
+    [
+      "\"overall\":";
+      "\"summary\":";
+      "\"wall_time\":";
+      "\"n_improved\":";
+      "\"n_regressed\":";
+      "\"n_equivalent\":";
+      "\"n_inconclusive\":";
+      "\"geomean_delta\":";
+      "\"cases\":";
+      "\"id\":";
+      "\"full_name\":";
+      "\"metric\":";
+      "\"relation\":";
+      "\"status\":";
+      "\"reason\":";
+      "\"delta\":";
+      "\"lower_delta\":";
+      "\"upper_delta\":";
+    ];
+  (* Both cases improve confidently on wall_time. *)
+  equal (float 0.5) 2.0 (number_after json "\"n_improved\":");
+  equal (float 0.5) 0.0 (number_after json "\"n_regressed\":");
+  (* geomean over ratios 0.8 and 0.9 is sqrt(0.72) - 1. *)
+  equal (float 1e-9)
+    (sqrt 0.72 -. 1.0)
+    (number_after json "\"geomean_delta\":")
+
 let () =
   run "check"
     [
@@ -303,4 +396,5 @@ let () =
             test_inconclusive_without_flag_exits_2;
         ];
       group "misc" [ test "default max regression" test_default_max_regression ];
+      group "json" [ test "to_json shape and geomean" test_to_json ];
     ]

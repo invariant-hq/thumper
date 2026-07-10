@@ -28,6 +28,11 @@ val pp_compact_results :
   int ->
   unit
 
+val pp_geomean_summary : Format.formatter -> Check.t -> unit
+(** [pp_geomean_summary fmt t] prints a one-line cross-case summary: the case
+    count, the improved/regressed counts for the primary time metric, and the
+    geometric-mean delta per metric. *)
+
 val emit_dirty_guidance : check_result:Check.t -> unit
 val warn_dirty_bless : Run.t -> unit
 val emit_github_annotations : Check.t -> unit

@@ -125,6 +125,51 @@ let pp_compact_results ?(show_failures = true) fmt failures ~n_inconclusive
       (styled `Yellow
          "Some results are inconclusive. Re-run with --ci for more samples.")
 
+(* One-line cross-case geomean summary *)
+
+let short_metric_label id =
+  match String.index_opt id '_' with
+  | Some i -> String.sub id 0 i
+  | None -> id
+
+let pp_geomean_summary fmt (t : Check.t) =
+  let total = List.length (Check.cases t) in
+  let summary = Check.summary t in
+  let primary =
+    match
+      List.find_opt
+        (fun (s : Check.metric_summary) -> Metric.is_time s.metric)
+        summary
+    with
+    | Some _ as s -> s
+    | None -> ( match summary with s :: _ -> Some s | [] -> None)
+  in
+  let n_improved, n_regressed =
+    match primary with
+    | Some s -> (s.Check.n_improved, s.n_regressed)
+    | None -> (0, 0)
+  in
+  let geomeans =
+    List.filter_map
+      (fun (s : Check.metric_summary) ->
+        match s.geomean_delta with
+        | Some d ->
+            Some
+              (Printf.sprintf "%s %+.1f%%"
+                 (short_metric_label (Metric.id s.metric))
+                 (d *. 100.0))
+        | None -> None)
+      summary
+  in
+  let geomean_part =
+    match geomeans with [] -> "" | gs -> "; geomean " ^ String.concat ", " gs
+  in
+  Format.fprintf fmt "%s@."
+    (styled `Faint
+       (Printf.sprintf "%d case%s: %d improved, %d regressed%s" total
+          (if total = 1 then "" else "s")
+          n_improved n_regressed geomean_part))
+
 (* Workflow guidance *)
 
 let has_case_improved (cr : Check.case_result) =

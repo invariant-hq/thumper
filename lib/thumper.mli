@@ -373,6 +373,15 @@ module Check : sig
   val pp : ?ascii_only:bool -> Format.formatter -> t -> unit
   (** [pp] formats a per-case verdict summary. *)
 
+  val to_json : t -> string
+  (** [to_json t] serialises the check result as JSON: ["overall"], a per-metric
+      ["summary"] (each metric id → \{ [n_improved]; [n_regressed];
+      [n_equivalent]; [n_inconclusive]; [geomean_delta] \}), and ["cases"] (per
+      case, per metric: relation, status, reason, delta, lower_delta,
+      upper_delta). [geomean_delta] is the geometric mean of the per-case ratios
+      [candidate / baseline], minus 1. Non-finite floats and absent options
+      serialise to [null]. *)
+
   val exit_code : t -> int
   (** [exit_code t] is [0] on pass, [1] on regression, [2] on inconclusive or
       missing baseline. *)
@@ -389,6 +398,16 @@ module Check : sig
     case_result
   (** [check_case ~config ~budgets ~baseline_case rc] classifies a single case.
   *)
+
+  val check :
+    config:Config.t ->
+    budgets:(string * Budget.t list) list ->
+    baseline:Baseline.t option ->
+    Run.t ->
+    t
+  (** [check ~config ~budgets ~baseline run] classifies each case of [run].
+      [budgets] maps case id to its resolved budgets. When [baseline] is [None],
+      only absolute budgets are evaluated. *)
 end
 
 (** {1:entry Entry point} *)

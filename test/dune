@@ -3,6 +3,17 @@
  (modules test_thumper)
  (libraries thumper windtrap))
 
+(executable
+ (name bench_fixture)
+ (modules bench_fixture)
+ (libraries thumper))
+
+(test
+ (name test_cli)
+ (modules test_cli)
+ (libraries thumper windtrap unix)
+ (deps bench_fixture.exe))
+
 (test
  (name test_check)
  (modules test_check)

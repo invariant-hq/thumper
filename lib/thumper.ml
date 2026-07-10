@@ -544,6 +544,9 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
       ~on_case_start ~on_case_done resolved
   in
   let inside_dune = Sys.getenv_opt "INSIDE_DUNE" <> None in
+  (* An explicit [--baseline] names a caller-managed baseline file, so the
+     INSIDE_DUNE special-casing of the default dune baseline does not apply. *)
+  let explicit_baseline = cli.baseline <> None in
   let result = measure () in
   let total = List.length (Run.cases result) in
   match cli.mode with
@@ -553,7 +556,7 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
       Option.iter (fun f -> Run.write_csv f result) cli.csv
   | `Bless ->
       let base = Baseline.of_run result in
-      if inside_dune then begin
+      if inside_dune && not explicit_baseline then begin
         Baseline.write (baseline_path ^ ".corrected") base;
         Format.eprintf "Baseline written. Run `dune promote` to accept.@."
       end
@@ -571,8 +574,19 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
       Thumper_output.pp_compact_results ~show_failures:has_baseline
         Format.err_formatter !failures ~n_inconclusive:n_inc
         ~n_improved:!n_improved total;
+      if has_baseline then
+        Thumper_output.pp_geomean_summary Format.err_formatter check_result;
       Thumper_output.emit_github_annotations check_result;
       Option.iter (fun f -> Run.write_csv f result) cli.csv;
+      (* Write the JSON verdict before the pass/fail exit decision so it exists
+         on regressing and inconclusive runs too. *)
+      Option.iter
+        (fun f ->
+          let oc = open_out f in
+          Fun.protect
+            ~finally:(fun () -> close_out oc)
+            (fun () -> output_string oc (Check.to_json check_result)))
+        cli.json;
       match baseline with
       | None ->
           let base = Baseline.of_run result in
@@ -600,7 +614,7 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
           if Config.get_fail_on_missing_baseline config then exit 1
       | Some baseline ->
           if Check.overall check_result = `Fail then exit 1
-          else if inside_dune && !n_improved > 0 then begin
+          else if (inside_dune || explicit_baseline) && !n_improved > 0 then begin
             write_corrected
               ~output_path:(baseline_path ^ ".corrected")
               ~baseline ~check_result ~current_run:result

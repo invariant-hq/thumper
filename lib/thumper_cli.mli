@@ -16,6 +16,7 @@ type t = {
   baseline : string option;
   profile : string option;
   csv : string option;
+  json : string option;
   quiet : bool;
   list_only : bool;
   color : string option;

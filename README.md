@@ -70,7 +70,7 @@ $ dune promote                     # accept the improvement
 
 **Presets:** `--quick` (2s, fast feedback), `--ci` (30s, tight CI), `--deterministic` (60s, allocation-first)
 
-**Output:** `-q` (compact: `.` pass, `↓` regress, `↑` improved, `?` inconclusive), `--csv FILE`, `--color MODE`
+**Output:** `-q` (compact: `.` pass, `↓` regress, `↑` improved, `?` inconclusive), `--csv FILE`, `--json FILE` (check verdict), `--color MODE`
 
 **Other:** `--baseline FILE`, `--profile NAME`, `-h`, `-V`
 
