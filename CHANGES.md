@@ -14,6 +14,8 @@
 - Honor an explicit `--baseline` regardless of `INSIDE_DUNE`: `--bless` now
   writes the given path directly (not `<path>.corrected`), and a check writes
   `<baseline>.corrected` (advancing the cases that improved) even outside dune.
-  The corrected write fires whenever any case improved on any metric and the run
-  did not fail — so an allocation win on a case whose timing is inconclusive
-  still ratchets. The default, dune-managed baseline behavior is unchanged.
+  The corrected write fires whenever any case improved on any metric — including
+  when the run fails overall, since the corrected file keeps every regressed or
+  unchanged case at its old baseline, so a genuine improvement still ratchets
+  when a different case trips a non-reproducing noise regression. The default,
+  dune-managed baseline behavior is unchanged.

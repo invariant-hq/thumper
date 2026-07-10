@@ -10,7 +10,10 @@
    - FIXTURE_METRICS "alloc" restricts measurement to the deterministic
                      alloc_words metric so verdicts do not depend on timing
    - FIXTURE_BUDGET  "regress" adds an unsatisfiable wall_time budget so the
-                     check always regresses *)
+                     check always regresses
+   - FIXTURE_REGRESSOR when set, adds a second "regressor" case that always
+                     regresses on wall_time, so the run fails overall while the
+                     primary case can still improve *)
 
 let alloc_target =
   match Sys.getenv_opt "FIXTURE_ALLOC" with
@@ -29,9 +32,20 @@ let budgets =
       Some [ Thumper.Budget.at_most ~metric:Thumper.Metric.wall_time 0.0 ]
   | _ -> None
 
-let () =
-  Thumper.run ~config ?budgets "fixture"
-    [
-      Thumper.bench "alloc" (fun () ->
-          Sys.opaque_identity (Array.make alloc_target 0));
-    ]
+let benches =
+  let primary =
+    Thumper.bench "alloc" (fun () ->
+        Sys.opaque_identity (Array.make alloc_target 0))
+  in
+  match Sys.getenv_opt "FIXTURE_REGRESSOR" with
+  | Some _ ->
+      [
+        primary;
+        Thumper.bench "regressor"
+          ~budgets:
+            [ Thumper.Budget.at_most ~metric:Thumper.Metric.wall_time 0.0 ]
+          (fun () -> Sys.opaque_identity (Array.make 1000 0));
+      ]
+  | None -> [ primary ]
+
+let () = Thumper.run ~config ?budgets "fixture" benches

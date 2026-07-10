@@ -55,8 +55,8 @@ let find_substring s sub =
   in
   go 0
 
-(* The per-metric point of [metric] in a line-oriented baseline file, if any. *)
-let baseline_point path metric =
+(* The point of [case]/[metric] in a line-oriented baseline file, if any. *)
+let baseline_point path case metric =
   let ic = open_in path in
   Fun.protect
     ~finally:(fun () -> close_in ic)
@@ -65,7 +65,7 @@ let baseline_point path metric =
         match input_line ic with
         | line -> (
             match String.split_on_char '\t' line with
-            | _ :: m :: point :: _ when m = metric ->
+            | c :: m :: point :: _ when c = case && m = metric ->
                 Some (float_of_string point)
             | _ -> loop ())
         | exception End_of_file -> None
@@ -160,9 +160,45 @@ let test_alloc_win_inconclusive_writes_corrected () =
       equal int 0 check_code;
       let corrected = baseline ^ ".corrected" in
       is_true (Sys.file_exists corrected);
-      match baseline_point corrected "alloc_words" with
+      match baseline_point corrected "alloc" "alloc_words" with
       | Some p -> is_true (p < 1000.0)
       | None -> failf "corrected file has no alloc_words estimate")
+
+(* A failing run (one case regresses) still ratchets the case that improved:
+   with an explicit --baseline, the corrected file is written before the exit,
+   advancing only the improved case and leaving the regressed case at its old
+   baseline. *)
+let test_fail_run_advances_improved_case () =
+  with_tmpdir (fun dir ->
+      let baseline = Filename.concat dir "b.thumper" in
+      let bless_code =
+        run_fixture ~inside_dune:false
+          ~env:[ ("FIXTURE_REGRESSOR", "1"); ("FIXTURE_ALLOC", "5000") ]
+          (Printf.sprintf "--bless --baseline %s --quick"
+             (Filename.quote baseline))
+      in
+      equal int 0 bless_code;
+      let reg_before =
+        match baseline_point baseline "regressor" "alloc_words" with
+        | Some p -> p
+        | None -> failf "baseline has no regressor/alloc_words estimate"
+      in
+      let check_code =
+        run_fixture ~inside_dune:false
+          ~env:[ ("FIXTURE_REGRESSOR", "1"); ("FIXTURE_ALLOC", "50") ]
+          (Printf.sprintf "-q --baseline %s --quick" (Filename.quote baseline))
+      in
+      equal int 1 check_code;
+      let corrected = baseline ^ ".corrected" in
+      is_true (Sys.file_exists corrected);
+      (* The improved case advanced. *)
+      (match baseline_point corrected "alloc" "alloc_words" with
+      | Some p -> is_true (p < 1000.0)
+      | None -> failf "corrected has no alloc/alloc_words estimate");
+      (* The regressed case kept its old baseline value. *)
+      match baseline_point corrected "regressor" "alloc_words" with
+      | Some p -> is_true (Float.abs (p -. reg_before) < 1.0)
+      | None -> failf "corrected has no regressor/alloc_words estimate")
 
 let () =
   run "cli"
@@ -180,5 +216,7 @@ let () =
             test_check_explicit_baseline_corrected;
           test "alloc win with inconclusive overall writes corrected"
             test_alloc_win_inconclusive_writes_corrected;
+          test "failing run still advances the improved case"
+            test_fail_run_advances_improved_case;
         ];
     ]

@@ -613,19 +613,22 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
               Format.eprintf "  Commit this file.@.");
           if Config.get_fail_on_missing_baseline config then exit 1
       | Some baseline ->
-          if Check.overall check_result = `Fail then exit 1
-          else
-            (* The explicit-baseline ratchet advances on any case that improved
-               on any metric, even when that case's overall verdict is
-               Inconclusive (e.g. an alloc win while wall_time is noisy). The
-               default dune-managed path keeps its [n_improved] gate so the
+          let write_corrected_file () =
+            write_corrected
+              ~output_path:(baseline_path ^ ".corrected")
+              ~baseline ~check_result ~current_run:result
+          in
+          if explicit_baseline then begin
+            (* The explicit-baseline ratchet advances every case that improved on
+               any metric, even when the overall verdict is Fail: write_corrected
+               keeps the regressed and unchanged cases at their old baseline
+               values, so a non-reproducing single-run noise regression cannot
+               block promoting a genuine improvement. The default dune-managed
+               path below keeps its non-Fail, [n_improved]-gated behavior so the
                dune-promote flow is unchanged. *)
-            let should_write =
-              if explicit_baseline then
-                List.exists has_case_improved (Check.cases check_result)
-              else inside_dune && !n_improved > 0
-            in
-            if should_write then
-              write_corrected
-                ~output_path:(baseline_path ^ ".corrected")
-                ~baseline ~check_result ~current_run:result)
+            if List.exists has_case_improved (Check.cases check_result) then
+              write_corrected_file ();
+            if Check.overall check_result = `Fail then exit 1
+          end
+          else if Check.overall check_result = `Fail then exit 1
+          else if inside_dune && !n_improved > 0 then write_corrected_file ())
