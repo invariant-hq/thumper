@@ -130,15 +130,18 @@ let detect_git_dirty () =
   | Some s when String.length s > 0 -> true
   | _ -> false
 
+let compute_fingerprint ~cpu_model =
+  let hostname = try Unix.gethostname () with _ -> "unknown" in
+  simple_hash
+    (Printf.sprintf "%s:%s:%s" hostname Sys.os_type
+       (Option.value ~default:"" cpu_model))
+
+let host_fingerprint () = compute_fingerprint ~cpu_model:(detect_cpu_model ())
+
 let detect_env () =
   let ocaml_version = Sys.ocaml_version in
-  let hostname = try Unix.gethostname () with _ -> "unknown" in
   let cpu_model = detect_cpu_model () in
-  let fingerprint_data =
-    Printf.sprintf "%s:%s:%s" hostname Sys.os_type
-      (Option.value ~default:"" cpu_model)
-  in
-  let host_fingerprint = simple_hash fingerprint_data in
+  let host_fingerprint = compute_fingerprint ~cpu_model in
   let git_commit = try_cmd "git rev-parse --short HEAD 2>/dev/null" in
   let git_dirty = Option.is_some git_commit && detect_git_dirty () in
   { host_fingerprint; cpu_model; ocaml_version; git_commit; git_dirty }

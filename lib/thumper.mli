@@ -303,24 +303,57 @@ module Baseline : sig
       {!Run.estimate} type. *)
 
   type t
-  (** The type for baselines. A baseline is a blessed snapshot of estimates,
-      suitable for checking into version control. *)
+  (** One machine's blessed snapshot of estimates. A baseline {e file}
+      ({!File.t}) holds one such section per machine, so a single committed
+      [.thumper] file can carry references from several machines side by side —
+      each machine checks against its own numbers and blessing on one never
+      clobbers another's. *)
 
-  val of_run : Run.t -> t
-  (** [of_run r] strips raw samples and warnings from [r]. *)
-
-  val read : string -> (t, string) result
-  (** [read path] decodes a baseline file. *)
-
-  val write : string -> t -> unit
-  (** [write path t] writes [t] to [path]. *)
+  val of_run : ?machine:string -> Run.t -> t
+  (** [of_run r] strips raw samples and warnings from [r]. [machine] overrides
+      the machine key (see {!machine}); it defaults to [r]'s host fingerprint. *)
 
   val of_cases : metadata:Run.metadata -> cases:case list -> t
-  (** [of_cases ~metadata ~cases] builds a baseline directly. *)
+  (** [of_cases ~metadata ~cases] builds a baseline directly. The machine key is
+      [metadata.host_fingerprint]. *)
 
   val metadata : t -> Run.metadata
   val cases : t -> case list
+
+  val machine : t -> string
+  (** [machine t] is the key identifying the machine that produced [t]: its host
+      fingerprint by default, or [THUMPER_MACHINE] when the run overrode it. *)
+
   val find_case : t -> string -> case option
+
+  (** Baseline files: one section per machine.
+
+      Reading selects a section with {!section}; writing preserves every other
+      machine's section, so blessing on one machine never clobbers another's.
+      Version-1 files (no machine delimiter) read as a single section keyed by
+      their host fingerprint and are rewritten as version 2 on the next
+      bless. *)
+  module File : sig
+    type baseline := t
+
+    type t
+    (** A baseline file: per-machine sections keyed by {!machine}. *)
+
+    val empty : t
+    val of_baseline : baseline -> t
+    val machines : t -> string list
+    (** [machines file] lists the machine keys with a section in [file]. *)
+
+    val section : t -> string -> baseline option
+    (** [section file key] is the section for machine [key], if present. *)
+
+    val add : t -> baseline -> t
+    (** [add file b] replaces [machine b]'s section with [b] (adding it if
+        absent), preserving every other machine's section. *)
+
+    val read : string -> (t, string) result
+    val write : string -> t -> unit
+  end
 end
 
 module Check : sig

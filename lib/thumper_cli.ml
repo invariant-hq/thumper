@@ -70,6 +70,9 @@ let print_help prog_name =
   Printf.printf "ENVIRONMENT VARIABLES:\n";
   Printf.printf "    THUMPER_FILTER     Filter pattern\n";
   Printf.printf "    THUMPER_PROFILE    Profile name\n";
+  Printf.printf
+    "    THUMPER_MACHINE    Machine key for this machine's baseline section\n";
+  Printf.printf "                       (default: automatic host fingerprint)\n";
   Printf.printf "    THUMPER_COLOR      Color output (always/never/auto)\n";
   Printf.printf "    THUMPER_QUICK      Use quick preset (1/true/yes)\n"
 

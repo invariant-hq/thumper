@@ -307,7 +307,8 @@ let has_case_improved (cr : Check.case_result) =
       match mr.relation with Some Check.Improved -> true | _ -> false)
     cr.metrics
 
-let write_corrected ~output_path ~baseline ~check_result ~current_run =
+let write_corrected ~output_path ~baseline_file ~machine ~baseline ~check_result
+    ~current_run =
   let measured =
     List.map
       (fun (rc : Run.case) ->
@@ -334,9 +335,10 @@ let write_corrected ~output_path ~baseline ~check_result ~current_run =
       (Baseline.cases baseline)
   in
   let corrected_cases = List.map snd measured @ unmeasured in
-  let metadata = Run.metadata current_run in
+  let metadata = { (Run.metadata current_run) with host_fingerprint = machine } in
   let corrected = Baseline.of_cases ~metadata ~cases:corrected_cases in
-  Baseline.write output_path corrected
+  (* Rewrite only this machine's section; every other machine's is preserved. *)
+  Baseline.File.write output_path (Baseline.File.add baseline_file corrected)
 
 (* Entry point *)
 
@@ -383,6 +385,13 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
   let config =
     match budgets with Some b -> Config.budgets b config | None -> config
   in
+  (* This machine's section key: an explicit override, else the host
+     fingerprint. Resolved before measuring so the right section is checked. *)
+  let machine =
+    match Sys.getenv_opt "THUMPER_MACHINE" with
+    | Some m when String.trim m <> "" -> String.trim m
+    | _ -> Sampler.host_fingerprint ()
+  in
   let baseline_path =
     if baseline <> "" then baseline
     else
@@ -426,14 +435,21 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
   end;
   let budget_map = budget_map_of_resolved resolved in
   let current_groups = ref [] in
-  (* Read baseline before measurement for per-case checking *)
+  (* Read the whole baseline file before measurement: [baseline_file] is kept so
+     writes preserve other machines' sections; [baseline_opt] is this machine's
+     section, used for per-case checking. *)
+  let baseline_file =
+    match cli.mode with
+    | `Explore -> Baseline.File.empty
+    | `Bless | `Check -> (
+        match Baseline.File.read baseline_path with
+        | Ok f -> f
+        | Error _ -> Baseline.File.empty)
+  in
   let baseline_opt =
     match cli.mode with
     | `Explore | `Bless -> None
-    | `Check -> (
-        match Baseline.read baseline_path with
-        | Ok b -> Some b
-        | Error _ -> None)
+    | `Check -> Baseline.File.section baseline_file machine
   in
   let failures = ref [] in
   let n_pass = ref 0 in
@@ -555,13 +571,17 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
       Format.printf "%a@." (Run.pp ?sort_by:None ?ascii_only:None) result;
       Option.iter (fun f -> Run.write_csv f result) cli.csv
   | `Bless ->
-      let base = Baseline.of_run result in
+      (* Merge this machine's fresh section into the file, preserving every
+         other machine's section. *)
+      let merged =
+        Baseline.File.add baseline_file (Baseline.of_run ~machine result)
+      in
       if inside_dune && not explicit_baseline then begin
-        Baseline.write (baseline_path ^ ".corrected") base;
+        Baseline.File.write (baseline_path ^ ".corrected") merged;
         Format.eprintf "Baseline written. Run `dune promote` to accept.@."
       end
       else begin
-        Baseline.write baseline_path base;
+        Baseline.File.write baseline_path merged;
         Format.eprintf "Baseline written to %s@." baseline_path
       end
   | `Check -> (
@@ -589,8 +609,12 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
         cli.json;
       match baseline with
       | None ->
-          let base = Baseline.of_run result in
-          Baseline.write baseline_path base;
+          (* No section for this machine yet: create it, preserving any other
+             machine's section already in the file. *)
+          let merged =
+            Baseline.File.add baseline_file (Baseline.of_run ~machine result)
+          in
+          Baseline.File.write baseline_path merged;
           Format.eprintf "@.%s No baseline found.@." (styled `Yellow "WARNING");
           let source_rel =
             match Sys.getenv_opt "INSIDE_DUNE" with
@@ -616,7 +640,8 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
           let write_corrected_file () =
             write_corrected
               ~output_path:(baseline_path ^ ".corrected")
-              ~baseline ~check_result ~current_run:result
+              ~baseline_file ~machine ~baseline ~check_result
+              ~current_run:result
           in
           if explicit_baseline then begin
             (* The explicit-baseline ratchet advances every case that improved on

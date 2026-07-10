@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Partition baselines into per-machine sections so one committed `.thumper` file
+  can hold references from several machines side by side. Each machine checks
+  against its own numbers, and blessing on one machine no longer clobbers
+  another's — the corrected/promote flow rewrites only the running machine's
+  section and preserves the rest, the same way it already preserves unmeasured
+  cases. A machine is keyed by its host fingerprint (hostname, OS, CPU) by
+  default, or by `THUMPER_MACHINE` when set, so a laptop and a CI runner never
+  silently share a section. Version-1 files (single machine, no delimiter) read
+  transparently as one section keyed by their host fingerprint and are rewritten
+  as version 2 on the next bless. New: `Baseline.File` (`read`/`write`/`section`/
+  `add`/`machines`/`of_baseline`/`empty`), `Baseline.machine`, an optional
+  `?machine` on `Baseline.of_run`, and `Sampler.host_fingerprint`.
+  `Baseline.read`/`Baseline.write` move to `Baseline.File`.
 - Add `--json FILE` to write the check verdict as JSON (check mode only), with a
   per-metric `summary` (`n_improved`/`n_regressed`/`n_equivalent`/
   `n_inconclusive` counts and a cross-case `geomean_delta`) and per-case metric

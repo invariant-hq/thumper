@@ -34,6 +34,14 @@ type resolved_case = {
 (** A benchmark case after tree resolution: stable id, inherited metrics and
     budgets, ready to measure. *)
 
+(** {1:environment Environment} *)
+
+val host_fingerprint : unit -> string
+(** [host_fingerprint ()] is a stable identifier for the current machine,
+    derived from its hostname, operating system, and CPU model. It is the
+    default machine key used to partition a baseline into per-machine sections
+    (see {!Baseline.File}). *)
+
 (** {1:measure Measuring} *)
 
 val measure :

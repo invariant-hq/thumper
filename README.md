@@ -76,6 +76,33 @@ $ dune promote                     # accept the improvement
 
 Run `--help` for full details.
 
+## Baselines across machines
+
+A baseline encodes the machine that produced it: a number blessed on your laptop
+is meaningless as a reference on a CI runner with a different CPU, core count, or
+OCaml version. thumper handles this without changing the committed workflow or
+splitting files — a single `<name>.thumper` holds one *section* per machine.
+
+- Each run checks against its own machine's section only. The first run on a new
+  machine creates that machine's section instead of failing.
+- Blessing, `dune promote`, and the corrected-file ratchet rewrite only the
+  running machine's section and preserve every other machine's verbatim, so
+  machines never clobber each other in the shared file.
+- A machine is identified by an automatic host fingerprint (hostname, OS, CPU).
+  Set `THUMPER_MACHINE=<name>` to choose the key explicitly — e.g. to give two
+  identical CI runners separate sections, or a single logical name to a fleet.
+
+The dune rule is unchanged; the same `nx.thumper` / `nx.thumper.corrected` files
+carry every machine's numbers:
+
+```
+$ dune runtest                      # checks against this machine's section
+$ THUMPER_MACHINE=ci-linux dune exec bench/bench_fib.exe -- --bless
+```
+
+Version-1 (single-machine) baseline files are read transparently and upgraded to
+the sectioned format on the next bless, preserving their existing numbers.
+
 ## Configuration
 
 `Config` presets control measurement intensity:

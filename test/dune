@@ -20,6 +20,12 @@
  (libraries thumper windtrap))
 
 (test
+ (name test_machines)
+ (modules test_machines)
+ (libraries thumper windtrap unix)
+ (deps bench_fixture.exe))
+
+(test
  (name test_baseline)
  (modules test_baseline)
  (libraries thumper windtrap))
