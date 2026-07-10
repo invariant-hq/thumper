@@ -614,8 +614,18 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
           if Config.get_fail_on_missing_baseline config then exit 1
       | Some baseline ->
           if Check.overall check_result = `Fail then exit 1
-          else if (inside_dune || explicit_baseline) && !n_improved > 0 then begin
-            write_corrected
-              ~output_path:(baseline_path ^ ".corrected")
-              ~baseline ~check_result ~current_run:result
-          end)
+          else
+            (* The explicit-baseline ratchet advances on any case that improved
+               on any metric, even when that case's overall verdict is
+               Inconclusive (e.g. an alloc win while wall_time is noisy). The
+               default dune-managed path keeps its [n_improved] gate so the
+               dune-promote flow is unchanged. *)
+            let should_write =
+              if explicit_baseline then
+                List.exists has_case_improved (Check.cases check_result)
+              else inside_dune && !n_improved > 0
+            in
+            if should_write then
+              write_corrected
+                ~output_path:(baseline_path ^ ".corrected")
+                ~baseline ~check_result ~current_run:result)

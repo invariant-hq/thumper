@@ -55,6 +55,23 @@ let find_substring s sub =
   in
   go 0
 
+(* The per-metric point of [metric] in a line-oriented baseline file, if any. *)
+let baseline_point path metric =
+  let ic = open_in path in
+  Fun.protect
+    ~finally:(fun () -> close_in ic)
+    (fun () ->
+      let rec loop () =
+        match input_line ic with
+        | line -> (
+            match String.split_on_char '\t' line with
+            | _ :: m :: point :: _ when m = metric ->
+                Some (float_of_string point)
+            | _ -> loop ())
+        | exception End_of_file -> None
+      in
+      loop ())
+
 (* A regressing check exits 1 and still writes the JSON verdict. *)
 let test_regress_exits_1_writes_json () =
   with_tmpdir (fun dir ->
@@ -115,6 +132,38 @@ let test_check_explicit_baseline_corrected () =
       equal int 0 check_code;
       is_true (Sys.file_exists (baseline ^ ".corrected")))
 
+(* An alloc win on a case whose overall verdict is Inconclusive (its wall_time
+   has no baseline, so it is inconclusive) still advances the explicit-baseline
+   ratchet: the run exits 0 and writes <baseline>.corrected with the reduced
+   alloc estimate. Guards against gating the write on the overall-Pass-only
+   [n_improved] counter. *)
+let test_alloc_win_inconclusive_writes_corrected () =
+  with_tmpdir (fun dir ->
+      let baseline = Filename.concat dir "b.thumper" in
+      let json = Filename.concat dir "out.json" in
+      (* Baseline measures only alloc_words. *)
+      let bless_code =
+        run_fixture ~inside_dune:false
+          ~env:[ ("FIXTURE_METRICS", "alloc"); ("FIXTURE_ALLOC", "5000") ]
+          (Printf.sprintf "--bless --baseline %s --quick"
+             (Filename.quote baseline))
+      in
+      equal int 0 bless_code;
+      (* Check measures the default metrics: wall_time/cpu_time have no baseline
+         (inconclusive), alloc_words improves. Overall is inconclusive. *)
+      let check_code =
+        run_fixture ~inside_dune:false
+          ~env:[ ("FIXTURE_ALLOC", "50") ]
+          (Printf.sprintf "-q --baseline %s --json %s --quick"
+             (Filename.quote baseline) (Filename.quote json))
+      in
+      equal int 0 check_code;
+      let corrected = baseline ^ ".corrected" in
+      is_true (Sys.file_exists corrected);
+      match baseline_point corrected "alloc_words" with
+      | Some p -> is_true (p < 1000.0)
+      | None -> failf "corrected file has no alloc_words estimate")
+
 let () =
   run "cli"
     [
@@ -129,5 +178,7 @@ let () =
             test_bless_explicit_baseline_inside_dune;
           test "check writes corrected without INSIDE_DUNE"
             test_check_explicit_baseline_corrected;
+          test "alloc win with inconclusive overall writes corrected"
+            test_alloc_win_inconclusive_writes_corrected;
         ];
     ]

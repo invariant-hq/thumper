@@ -12,6 +12,8 @@
 - Expose `Check.check`, the full-run companion to `Check.check_case`, so the
   check result (and `Check.to_json`) can be produced programmatically.
 - Honor an explicit `--baseline` regardless of `INSIDE_DUNE`: `--bless` now
-  writes the given path directly (not `<path>.corrected`), and a check with an
-  improvement writes `<baseline>.corrected` even outside dune. The default,
-  dune-managed baseline behavior is unchanged.
+  writes the given path directly (not `<path>.corrected`), and a check writes
+  `<baseline>.corrected` (advancing the cases that improved) even outside dune.
+  The corrected write fires whenever any case improved on any metric and the run
+  did not fail — so an allocation win on a case whose timing is inconclusive
+  still ratchets. The default, dune-managed baseline behavior is unchanged.
