@@ -24,11 +24,14 @@
   regressed counts, and the geometric-mean delta per metric.
 - Expose `Check.check`, the full-run companion to `Check.check_case`, so the
   check result (and `Check.to_json`) can be produced programmatically.
-- Honor an explicit `--baseline` regardless of `INSIDE_DUNE`: `--bless` now
-  writes the given path directly (not `<path>.corrected`), and a check writes
-  `<baseline>.corrected` (advancing the cases that improved) even outside dune.
-  The corrected write fires whenever any case improved on any metric — including
-  when the run fails overall, since the corrected file keeps every regressed or
-  unchanged case at its old baseline, so a genuine improvement still ratchets
-  when a different case trips a non-reproducing noise regression. The default,
-  dune-managed baseline behavior is unchanged.
+- Make check-mode baseline updates transactional. The selected baseline is
+  always immutable input; under dune, a fully passing run writes a corrected
+  candidate only when at least one metric confidently improves. Failed and
+  inconclusive runs remove any stale candidate and write nothing, while a
+  missing machine section writes the complete candidate to
+  `<baseline>.corrected` so `diff?` owns promotion. Ratcheting now replaces only
+  improved metric estimates, preserving equivalent, inconclusive, and regressed
+  estimates even when their case passes through an accepted trade-off.
+  `--baseline` now selects a path without changing artifact policy, including
+  for `--bless`; unreadable existing baselines fail instead of being treated as
+  absent.

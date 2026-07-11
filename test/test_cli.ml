@@ -46,6 +46,12 @@ let read_file path =
     ~finally:(fun () -> close_in ic)
     (fun () -> really_input_string ic (in_channel_length ic))
 
+let write_file path contents =
+  let oc = open_out_bin path in
+  Fun.protect
+    ~finally:(fun () -> close_out oc)
+    (fun () -> output_string oc contents)
+
 let find_substring s sub =
   let n = String.length s and m = String.length sub in
   let rec go i =
@@ -72,6 +78,11 @@ let baseline_point path case metric =
       in
       loop ())
 
+let require_baseline_point path case metric =
+  match baseline_point path case metric with
+  | Some point -> point
+  | None -> failf "%s has no %s/%s estimate" path case metric
+
 (* A regressing check exits 1 and still writes the JSON verdict. *)
 let test_regress_exits_1_writes_json () =
   with_tmpdir (fun dir ->
@@ -84,6 +95,7 @@ let test_regress_exits_1_writes_json () =
              (Filename.quote baseline))
       in
       equal int 0 bless_code;
+      write_file (baseline ^ ".corrected") "stale candidate\n";
       let check_code =
         run_fixture ~inside_dune:false
           ~env:[ ("FIXTURE_BUDGET", "regress") ]
@@ -93,10 +105,15 @@ let test_regress_exits_1_writes_json () =
       equal int 1 check_code;
       is_true (Sys.file_exists json);
       let contents = read_file json in
-      is_true (find_substring contents "\"overall\":\"fail\""))
+      is_true (find_substring contents "\"overall\":\"fail\"");
+      is_true (not (Sys.file_exists (baseline ^ ".corrected"))))
 
-(* Bless with an explicit --baseline under INSIDE_DUNE writes the baseline path,
-   not <path>.corrected. *)
+let baseline_has_machine path machine =
+  match Thumper.Baseline.File.read path with
+  | Error msg -> failf "cannot read baseline: %s" msg
+  | Ok file -> Option.is_some (Thumper.Baseline.File.section file machine)
+
+(* Dune owns promotion regardless of how the baseline path was selected. *)
 let test_bless_explicit_baseline_inside_dune () =
   with_tmpdir (fun dir ->
       let baseline = Filename.concat dir "b.thumper" in
@@ -107,15 +124,14 @@ let test_bless_explicit_baseline_inside_dune () =
              (Filename.quote baseline))
       in
       equal int 0 code;
-      is_true (Sys.file_exists baseline);
-      is_true (not (Sys.file_exists (baseline ^ ".corrected"))))
+      is_true (not (Sys.file_exists baseline));
+      is_true (Sys.file_exists (baseline ^ ".corrected")))
 
-(* A check with an explicit --baseline and an improvement writes
-   <baseline>.corrected even without INSIDE_DUNE. *)
-let test_check_explicit_baseline_corrected () =
+(* Selecting an explicit path does not enable Dune's artifact policy outside
+   Dune. *)
+let test_check_explicit_baseline_outside_dune () =
   with_tmpdir (fun dir ->
       let baseline = Filename.concat dir "b.thumper" in
-      let json = Filename.concat dir "out.json" in
       let bless_code =
         run_fixture ~inside_dune:false
           ~env:[ ("FIXTURE_METRICS", "alloc"); ("FIXTURE_ALLOC", "5000") ]
@@ -126,22 +142,16 @@ let test_check_explicit_baseline_corrected () =
       let check_code =
         run_fixture ~inside_dune:false
           ~env:[ ("FIXTURE_METRICS", "alloc"); ("FIXTURE_ALLOC", "50") ]
-          (Printf.sprintf "-q --baseline %s --json %s --quick"
-             (Filename.quote baseline) (Filename.quote json))
+          (Printf.sprintf "-q --baseline %s --quick" (Filename.quote baseline))
       in
       equal int 0 check_code;
-      is_true (Sys.file_exists (baseline ^ ".corrected")))
+      is_true (not (Sys.file_exists (baseline ^ ".corrected"))))
 
-(* An alloc win on a case whose overall verdict is Inconclusive (its wall_time
-   has no baseline, so it is inconclusive) still advances the explicit-baseline
-   ratchet: the run exits 0 and writes <baseline>.corrected with the reduced
-   alloc estimate. Guards against gating the write on the overall-Pass-only
-   [n_improved] counter. *)
-let test_alloc_win_inconclusive_writes_corrected () =
+(* A check can consume a read-only Dune dependency because it writes only the
+   sibling corrected candidate. *)
+let test_read_only_baseline () =
   with_tmpdir (fun dir ->
       let baseline = Filename.concat dir "b.thumper" in
-      let json = Filename.concat dir "out.json" in
-      (* Baseline measures only alloc_words. *)
       let bless_code =
         run_fixture ~inside_dune:false
           ~env:[ ("FIXTURE_METRICS", "alloc"); ("FIXTURE_ALLOC", "5000") ]
@@ -149,26 +159,55 @@ let test_alloc_win_inconclusive_writes_corrected () =
              (Filename.quote baseline))
       in
       equal int 0 bless_code;
-      (* Check measures the default metrics: wall_time/cpu_time have no baseline
-         (inconclusive), alloc_words improves. Overall is inconclusive. *)
+      let before = read_file baseline in
+      Unix.chmod baseline 0o444;
       let check_code =
+        run_fixture ~inside_dune:true
+          ~env:[ ("FIXTURE_METRICS", "alloc"); ("FIXTURE_ALLOC", "50") ]
+          (Printf.sprintf "-q --baseline %s --quick" (Filename.quote baseline))
+      in
+      equal int 0 check_code;
+      equal string before (read_file baseline);
+      is_true (Sys.file_exists (baseline ^ ".corrected")))
+
+(* A new machine produces a complete candidate without changing the committed
+   file, so the following diff? action owns the promotion. *)
+let test_missing_machine_writes_corrected () =
+  with_tmpdir (fun dir ->
+      let baseline = Filename.concat dir "b.thumper" in
+      let bless_code =
         run_fixture ~inside_dune:false
-          ~env:[ ("FIXTURE_ALLOC", "50") ]
-          (Printf.sprintf "-q --baseline %s --json %s --quick"
-             (Filename.quote baseline) (Filename.quote json))
+          ~env:
+            [
+              ("THUMPER_MACHINE", "machine-a");
+              ("FIXTURE_METRICS", "alloc");
+              ("FIXTURE_ALLOC", "5000");
+            ]
+          (Printf.sprintf "--bless --baseline %s --quick"
+             (Filename.quote baseline))
+      in
+      equal int 0 bless_code;
+      let before = read_file baseline in
+      let check_code =
+        run_fixture ~inside_dune:true
+          ~env:
+            [
+              ("THUMPER_MACHINE", "machine-b");
+              ("FIXTURE_FAIL_MISSING", "1");
+              ("FIXTURE_METRICS", "alloc");
+              ("FIXTURE_ALLOC", "50");
+            ]
+          (Printf.sprintf "-q --baseline %s" (Filename.quote baseline))
       in
       equal int 0 check_code;
       let corrected = baseline ^ ".corrected" in
+      equal string before (read_file baseline);
       is_true (Sys.file_exists corrected);
-      match baseline_point corrected "alloc" "alloc_words" with
-      | Some p -> is_true (p < 1000.0)
-      | None -> failf "corrected file has no alloc_words estimate")
+      is_true (baseline_has_machine corrected "machine-a");
+      is_true (baseline_has_machine corrected "machine-b"))
 
-(* A failing run (one case regresses) still ratchets the case that improved:
-   with an explicit --baseline, the corrected file is written before the exit,
-   advancing only the improved case and leaving the regressed case at its old
-   baseline. *)
-let test_fail_run_advances_improved_case () =
+(* A suite cannot publish an apparently promotable subset when any case fails. *)
+let test_failed_mixed_suite_writes_no_corrected () =
   with_tmpdir (fun dir ->
       let baseline = Filename.concat dir "b.thumper" in
       let bless_code =
@@ -178,27 +217,96 @@ let test_fail_run_advances_improved_case () =
              (Filename.quote baseline))
       in
       equal int 0 bless_code;
-      let reg_before =
-        match baseline_point baseline "regressor" "alloc_words" with
-        | Some p -> p
-        | None -> failf "baseline has no regressor/alloc_words estimate"
-      in
       let check_code =
-        run_fixture ~inside_dune:false
+        run_fixture ~inside_dune:true
           ~env:[ ("FIXTURE_REGRESSOR", "1"); ("FIXTURE_ALLOC", "50") ]
           (Printf.sprintf "-q --baseline %s --quick" (Filename.quote baseline))
       in
       equal int 1 check_code;
+      is_true (not (Sys.file_exists (baseline ^ ".corrected"))))
+
+(* An existing baseline that cannot be decoded as a file is an operational
+   error, not permission to initialize an empty baseline. *)
+let test_unreadable_baseline_fails () =
+  with_tmpdir (fun dir ->
+      let baseline = Filename.concat dir "baseline-directory" in
+      Unix.mkdir baseline 0o755;
+      Fun.protect
+        ~finally:(fun () -> Unix.rmdir baseline)
+        (fun () ->
+          let code =
+            run_fixture ~inside_dune:true
+              ~env:[ ("FIXTURE_METRICS", "alloc") ]
+              (Printf.sprintf "-q --baseline %s --quick"
+                 (Filename.quote baseline))
+          in
+          equal int 2 code;
+          is_true (not (Sys.file_exists (baseline ^ ".corrected")))))
+
+(* An inconclusive suite is not evidence that an independent improvement is
+   safe to ratchet. *)
+let test_inconclusive_suite_writes_no_corrected () =
+  with_tmpdir (fun dir ->
+      let baseline = Filename.concat dir "b.thumper" in
+      let bless_code =
+        run_fixture ~inside_dune:false
+          ~env:[ ("FIXTURE_METRICS", "alloc"); ("FIXTURE_ALLOC", "5000") ]
+          (Printf.sprintf "--bless --baseline %s --quick"
+             (Filename.quote baseline))
+      in
+      equal int 0 bless_code;
+      let check_code =
+        run_fixture ~inside_dune:true
+          ~env:[ ("FIXTURE_ALLOC", "50") ]
+          (Printf.sprintf "-q --baseline %s --quick" (Filename.quote baseline))
+      in
+      equal int 0 check_code;
+      is_true (not (Sys.file_exists (baseline ^ ".corrected"))))
+
+(* A case-level pass may contain an accepted trade-off. Ratcheting advances the
+   confidently improved metric without blessing the regressed metric. *)
+let test_mixed_metrics_only_ratchet_improvement () =
+  with_tmpdir (fun dir ->
+      let baseline = Filename.concat dir "b.thumper" in
+      let bless_code =
+        run_fixture ~inside_dune:false
+          ~env:
+            [
+              ("FIXTURE_METRICS", "mixed");
+              ("FIXTURE_FAST", "100");
+              ("FIXTURE_SLOW", "100");
+            ]
+          (Printf.sprintf "--bless --baseline %s --quick"
+             (Filename.quote baseline))
+      in
+      equal int 0 bless_code;
+      let fast_before =
+        require_baseline_point baseline "alloc" "fixture_fast"
+      in
+      let slow_before =
+        require_baseline_point baseline "alloc" "fixture_slow"
+      in
+      let check_code =
+        run_fixture ~inside_dune:true
+          ~env:
+            [
+              ("FIXTURE_METRICS", "mixed");
+              ("FIXTURE_FAST", "50");
+              ("FIXTURE_SLOW", "200");
+            ]
+          (Printf.sprintf "-q --baseline %s --quick" (Filename.quote baseline))
+      in
+      equal int 0 check_code;
       let corrected = baseline ^ ".corrected" in
       is_true (Sys.file_exists corrected);
-      (* The improved case advanced. *)
-      (match baseline_point corrected "alloc" "alloc_words" with
-      | Some p -> is_true (p < 1000.0)
-      | None -> failf "corrected has no alloc/alloc_words estimate");
-      (* The regressed case kept its old baseline value. *)
-      match baseline_point corrected "regressor" "alloc_words" with
-      | Some p -> is_true (Float.abs (p -. reg_before) < 1.0)
-      | None -> failf "corrected has no regressor/alloc_words estimate")
+      let fast_after =
+        require_baseline_point corrected "alloc" "fixture_fast"
+      in
+      let slow_after =
+        require_baseline_point corrected "alloc" "fixture_slow"
+      in
+      is_true (fast_after < fast_before);
+      is_true (Float.abs (slow_after -. slow_before) < 0.01))
 
 let () =
   run "cli"
@@ -210,13 +318,22 @@ let () =
         ];
       group "explicit baseline"
         [
-          test "bless under INSIDE_DUNE writes baseline not corrected"
+          test "bless under INSIDE_DUNE writes corrected"
             test_bless_explicit_baseline_inside_dune;
-          test "check writes corrected without INSIDE_DUNE"
-            test_check_explicit_baseline_corrected;
-          test "alloc win with inconclusive overall writes corrected"
-            test_alloc_win_inconclusive_writes_corrected;
-          test "failing run still advances the improved case"
-            test_fail_run_advances_improved_case;
+          test "check outside Dune writes no corrected artifact"
+            test_check_explicit_baseline_outside_dune;
+        ];
+      group "transactional check"
+        [
+          test "read-only baseline remains unchanged" test_read_only_baseline;
+          test "missing machine writes a corrected candidate"
+            test_missing_machine_writes_corrected;
+          test "failed mixed suite writes no corrected artifact"
+            test_failed_mixed_suite_writes_no_corrected;
+          test "inconclusive suite writes no corrected artifact"
+            test_inconclusive_suite_writes_no_corrected;
+          test "unreadable baseline fails" test_unreadable_baseline_fails;
+          test "mixed metrics ratchet only the improvement"
+            test_mixed_metrics_only_ratchet_improvement;
         ];
     ]

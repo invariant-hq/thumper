@@ -14,13 +14,13 @@ open Windtrap
 let fixture =
   Filename.concat (Filename.dirname Sys.executable_name) "bench_fixture.exe"
 
-let run_fixture ~machine ~env args =
+let run_fixture ?(inside_dune = false) ~machine ~env args =
   let env_str =
-    String.concat ""
-      (List.map (fun (k, v) -> Printf.sprintf "%s=%s " k v) env)
+    String.concat "" (List.map (fun (k, v) -> Printf.sprintf "%s=%s " k v) env)
   in
+  let dune_env = if inside_dune then "INSIDE_DUNE=1" else "-u INSIDE_DUNE" in
   let cmd =
-    Printf.sprintf "env -u INSIDE_DUNE THUMPER_MACHINE=%s %s%s %s >/dev/null 2>&1"
+    Printf.sprintf "env %s THUMPER_MACHINE=%s %s%s %s >/dev/null 2>&1" dune_env
       machine env_str (Filename.quote fixture) args
   in
   match Unix.system cmd with
@@ -120,10 +120,10 @@ let test_corrected_preserves_other_machine () =
         | Some p -> p
         | None -> failf "machine-a section missing"
       in
-      (* Machine B improves its alloc; an explicit --baseline writes the
-         corrected file. *)
+      (* Machine B improves its alloc; dune writes the corrected file even
+         though the path was selected explicitly. *)
       let code =
-        run_fixture ~machine:"machine-b"
+        run_fixture ~inside_dune:true ~machine:"machine-b"
           ~env:[ ("FIXTURE_METRICS", "alloc"); ("FIXTURE_ALLOC", "50") ]
           (Printf.sprintf "-q --baseline %s --quick" (Filename.quote baseline))
       in

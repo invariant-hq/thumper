@@ -461,21 +461,27 @@ val run :
     This is the primary entry point. It parses CLI flags from [argv] (defaults
     to [Sys.argv]) and operates in one of three modes:
 
-    - {b Default} (regression check): measures, compares against baseline,
+    - {b Default} (regression check): measures against an immutable baseline and
       prints verdicts. The process exits [1] when {!Check.overall} is [`Fail]:
       regressions, environment incompatibility with [env_policy = `Fail],
       inconclusive with [fail_on_inconclusive], or missing baseline with
       [fail_on_missing_baseline]. Inconclusive results without
       [fail_on_inconclusive] are informational and do not cause a non-zero exit.
-      On failure, no corrected file is written.
+      Under dune, a fully passing improvement writes a corrected candidate that
+      replaces only confidently improved metric estimates. Failed and
+      inconclusive checks write no candidate. A missing machine section writes a
+      complete corrected candidate and returns successfully under dune so a
+      following [diff?] action exposes it for promotion.
     - {b [--bless]}: measures and writes all results as the new baseline,
       regardless of regressions.
     - {b [--explore]}: measures and prints results without any baseline
       interaction.
 
-    [baseline] defaults to ["<name>.thumper"]. If the baseline file does not
-    exist, it is created on the first run. With [fail_on_missing_baseline], the
-    process exits [1] after creating the baseline. *)
+    [baseline] defaults to ["<name>.thumper"]. [--baseline] changes only this
+    path; it does not change Dune artifact policy. If the file or current
+    machine section does not exist, check mode writes ["<baseline>.corrected"]
+    without modifying the baseline. Outside dune, [fail_on_missing_baseline]
+    makes the process exit [1] after writing that candidate. *)
 
 (** {1:benchmarks Defining benchmarks} *)
 

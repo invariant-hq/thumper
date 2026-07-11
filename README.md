@@ -45,8 +45,8 @@ Add a dune rule:
 Run it:
 
 ```
-$ dune runtest                      # first run creates the baseline
-$ cp _build/default/bench/fib.thumper bench/fib.thumper
+$ dune runtest                      # first run proposes the baseline
+$ dune promote                      # accept the proposed baseline
 $ git add bench/fib.thumper         # commit the baseline
 
 $ dune runtest                      # subsequent runs check against it
@@ -60,7 +60,7 @@ $ dune promote                     # accept the improvement
 
 | Flag | Behavior |
 |------|----------|
-| *(default)* | Measure and check against baseline. Regressions exit 1. Improvements write a `.corrected` file for `dune promote`. |
+| *(default)* | Measure against an immutable baseline. Passing improvements and missing machine sections propose a `.corrected` file under dune; regressions and inconclusive runs do not. |
 | `--bless` | Measure and write results as the new baseline, regardless of regressions. |
 | `--explore` | Measure and print results. No baseline interaction. |
 
@@ -84,7 +84,7 @@ OCaml version. thumper handles this without changing the committed workflow or
 splitting files — a single `<name>.thumper` holds one *section* per machine.
 
 - Each run checks against its own machine's section only. The first run on a new
-  machine creates that machine's section instead of failing.
+  machine proposes that section through the normal `dune promote` workflow.
 - Blessing, `dune promote`, and the corrected-file ratchet rewrite only the
   running machine's section and preserve every other machine's verbatim, so
   machines never clobber each other in the shared file.

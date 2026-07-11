@@ -307,6 +307,38 @@ let has_case_improved (cr : Check.case_result) =
       match mr.relation with Some Check.Improved -> true | _ -> false)
     cr.metrics
 
+let can_initialize_missing_machine check_result =
+  List.for_all
+    (fun (case : Check.case_result) ->
+      List.for_all
+        (fun (metric : Check.metric_result) ->
+          metric.status = `Pass || metric.reason = Some Check.Missing_baseline)
+        case.metrics)
+    (Check.cases check_result)
+
+let corrected_estimates (baseline_case : Baseline.case) (current : Run.case)
+    (check : Check.case_result) =
+  List.map
+    (fun (baseline_estimate : Run.estimate) ->
+      let improved =
+        List.exists
+          (fun (metric_result : Check.metric_result) ->
+            Metric.equal metric_result.metric baseline_estimate.metric
+            && metric_result.relation = Some Check.Improved)
+          check.metrics
+      in
+      if improved then
+        match
+          List.find_opt
+            (fun (estimate : Run.estimate) ->
+              Metric.equal estimate.metric baseline_estimate.metric)
+            current.estimates
+        with
+        | Some estimate -> estimate
+        | None -> baseline_estimate
+      else baseline_estimate)
+    baseline_case.estimates
+
 let write_corrected ~output_path ~baseline_file ~machine ~baseline ~check_result
     ~current_run =
   let measured =
@@ -318,12 +350,11 @@ let write_corrected ~output_path ~baseline_file ~machine ~baseline ~check_result
             (Check.cases check_result)
         in
         let case =
-          match cr with
-          | Some cr when has_case_improved cr -> Baseline.case_of_run rc
-          | _ -> (
-              match Baseline.find_case baseline rc.id with
-              | Some old -> old
-              | None -> Baseline.case_of_run rc)
+          match (Baseline.find_case baseline rc.id, cr) with
+          | Some old, Some check ->
+              { old with estimates = corrected_estimates old rc check }
+          | Some old, None -> old
+          | None, _ -> Baseline.case_of_run rc
         in
         (rc.Run.id, case))
       (Run.cases current_run)
@@ -335,7 +366,9 @@ let write_corrected ~output_path ~baseline_file ~machine ~baseline ~check_result
       (Baseline.cases baseline)
   in
   let corrected_cases = List.map snd measured @ unmeasured in
-  let metadata = { (Run.metadata current_run) with host_fingerprint = machine } in
+  let metadata =
+    { (Run.metadata current_run) with host_fingerprint = machine }
+  in
   let corrected = Baseline.of_cases ~metadata ~cases:corrected_cases in
   (* Rewrite only this machine's section; every other machine's is preserved. *)
   Baseline.File.write output_path (Baseline.File.add baseline_file corrected)
@@ -442,9 +475,13 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
     match cli.mode with
     | `Explore -> Baseline.File.empty
     | `Bless | `Check -> (
-        match Baseline.File.read baseline_path with
-        | Ok f -> f
-        | Error _ -> Baseline.File.empty)
+        if not (Sys.file_exists baseline_path) then Baseline.File.empty
+        else
+          match Baseline.File.read baseline_path with
+          | Ok f -> f
+          | Error msg ->
+              Format.eprintf "Error: %s@." msg;
+              exit 2)
   in
   let baseline_opt =
     match cli.mode with
@@ -560,9 +597,9 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
       ~on_case_start ~on_case_done resolved
   in
   let inside_dune = Sys.getenv_opt "INSIDE_DUNE" <> None in
-  (* An explicit [--baseline] names a caller-managed baseline file, so the
-     INSIDE_DUNE special-casing of the default dune baseline does not apply. *)
-  let explicit_baseline = cli.baseline <> None in
+  let corrected_path = baseline_path ^ ".corrected" in
+  if cli.mode = `Check && Sys.file_exists corrected_path then
+    Sys.remove corrected_path;
   let result = measure () in
   let total = List.length (Run.cases result) in
   match cli.mode with
@@ -576,8 +613,8 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
       let merged =
         Baseline.File.add baseline_file (Baseline.of_run ~machine result)
       in
-      if inside_dune && not explicit_baseline then begin
-        Baseline.File.write (baseline_path ^ ".corrected") merged;
+      if inside_dune then begin
+        Baseline.File.write corrected_path merged;
         Format.eprintf "Baseline written. Run `dune promote` to accept.@."
       end
       else begin
@@ -609,51 +646,33 @@ let run ?(baseline = "") ?(config = Config.default) ?budgets ?(argv = Sys.argv)
         cli.json;
       match baseline with
       | None ->
-          (* No section for this machine yet: create it, preserving any other
-             machine's section already in the file. *)
-          let merged =
-            Baseline.File.add baseline_file (Baseline.of_run ~machine result)
-          in
-          Baseline.File.write baseline_path merged;
-          Format.eprintf "@.%s No baseline found.@." (styled `Yellow "WARNING");
-          let source_rel =
-            match Sys.getenv_opt "INSIDE_DUNE" with
-            | Some build_root ->
-                let prefix = build_root ^ "/" in
-                let plen = String.length prefix in
-                let blen = String.length baseline_path in
-                if blen > plen && String.sub baseline_path 0 plen = prefix then
-                  Some (String.sub baseline_path plen (blen - plen))
-                else None
-            | None -> None
-          in
-          (match source_rel with
-          | Some src ->
-              let build_rel = "_build/default/" ^ src in
-              Format.eprintf "  Created %s@." build_rel;
-              Format.eprintf "  cp %s %s@." build_rel src
-          | None ->
-              Format.eprintf "  Created %s@." baseline_path;
-              Format.eprintf "  Commit this file.@.");
-          if Config.get_fail_on_missing_baseline config then exit 1
-      | Some baseline ->
-          let write_corrected_file () =
-            write_corrected
-              ~output_path:(baseline_path ^ ".corrected")
-              ~baseline_file ~machine ~baseline ~check_result
-              ~current_run:result
-          in
-          if explicit_baseline then begin
-            (* The explicit-baseline ratchet advances every case that improved on
-               any metric, even when the overall verdict is Fail: write_corrected
-               keeps the regressed and unchanged cases at their old baseline
-               values, so a non-reproducing single-run noise regression cannot
-               block promoting a genuine improvement. The default dune-managed
-               path below keeps its non-Fail, [n_improved]-gated behavior so the
-               dune-promote flow is unchanged. *)
-            if List.exists has_case_improved (Check.cases check_result) then
-              write_corrected_file ();
-            if Check.overall check_result = `Fail then exit 1
+          if not (can_initialize_missing_machine check_result) then
+            exit (Check.exit_code check_result)
+          else begin
+            (* A missing machine section is initialization, not a ratchet. The
+               committed baseline remains immutable and the complete candidate
+               preserves every section already present in the file. *)
+            let merged =
+              Baseline.File.add baseline_file (Baseline.of_run ~machine result)
+            in
+            Baseline.File.write corrected_path merged;
+            Format.eprintf "@.%s No baseline found for this machine.@."
+              (styled `Yellow "WARNING");
+            if inside_dune then
+              Format.eprintf "  Run `dune promote` to accept.@."
+            else begin
+              Format.eprintf "  Candidate written to %s@." corrected_path;
+              Format.eprintf "  Move it to %s and commit it.@." baseline_path
+            end;
+            if (not inside_dune) && Config.get_fail_on_missing_baseline config
+            then exit 1
           end
-          else if Check.overall check_result = `Fail then exit 1
-          else if inside_dune && !n_improved > 0 then write_corrected_file ())
+      | Some baseline ->
+          if Check.overall check_result = `Fail then exit 1
+          else if
+            inside_dune
+            && Check.overall check_result = `Pass
+            && List.exists has_case_improved (Check.cases check_result)
+          then
+            write_corrected ~output_path:corrected_path ~baseline_file ~machine
+              ~baseline ~check_result ~current_run:result)

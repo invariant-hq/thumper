@@ -6,16 +6,18 @@ checked into version control next to the benchmark source.
 
 ## Principles
 
-1. **Check mode reads, never writes the baseline.** Inside dune, it
-   writes a `.corrected` file for the `dune promote` workflow. Outside
-   dune, it only prints results and exits.
+1. **Check mode reads, never writes the baseline.** Inside dune, a fully passing
+   improvement writes a `.corrected` file for `dune promote`. Failed and
+   inconclusive checks write nothing. Outside dune, an ordinary check only
+   prints results and exits.
 
 2. **Bless mode always writes.** Inside dune, it writes `.corrected`
    (use `dune promote` to accept). Outside dune, it writes the baseline
    directly.
 
-3. **No baseline: creates in the build directory.** The user explicitly
-   copies it to the source tree and commits it.
+3. **A missing baseline or machine section is proposed, never installed.** The
+   complete candidate is written to `.corrected`, preserving every existing
+   machine section. Under dune, `diff?` exposes it for promotion.
 
 ## Baseline file
 
@@ -34,18 +36,22 @@ source-tree copy is what gets committed to version control.
 Measures all benchmarks and compares against the baseline.
 
 - **No regressions, no improvements**: exit 0, no files written.
-  Inside dune, writes a `.corrected` file identical to the baseline
-  (no diff).
 
 - **No regressions, some improvements**: exit 0. Inside dune, writes
-  `.corrected` with improved cases updated and equivalent cases
-  preserved unchanged. `dune promote` ratchets the baseline forward.
+  `.corrected` with only confidently improved metric estimates updated;
+  equivalent, inconclusive, and regressed estimates retain their baseline
+  values. `dune promote` ratchets the baseline forward.
 
 - **Regressions detected**: exit 1. No `.corrected` file written.
   The build fails.
 
-- **No baseline**: writes the baseline to the build directory and
-  prints a warning with a `cp` command to copy it to the source tree.
+- **Inconclusive**: no `.corrected` file is written. It exits according to the
+  configured inconclusive policy.
+
+- **No baseline for this machine**: writes the complete candidate to
+  `.corrected`. Under dune the benchmark exits successfully so the following
+  `diff?` action reports the promotable change. Outside dune, move the candidate
+  to the baseline path explicitly.
 
 ### Bless (`--bless`)
 
@@ -102,11 +108,10 @@ Benchmarking parser.
 
 .....
 
-WARNING No baseline found.
-  Created _build/default/examples/parser.thumper
-  cp _build/default/examples/parser.thumper examples/parser.thumper
+WARNING No baseline found for this machine.
+  Run `dune promote` to accept.
 
-$ cp _build/default/examples/parser.thumper examples/parser.thumper
+$ dune promote
 $ git add examples/parser.thumper
 ```
 
@@ -178,8 +183,8 @@ dune rules.
 
 ## Environment
 
-- `INSIDE_DUNE`: set by dune for all commands. Controls whether
-  `.corrected` files are written and enables color in captured output.
+- `INSIDE_DUNE`: set by dune for all commands. Routes passing improvements and
+  bless output through `.corrected` files, and enables color in captured output.
 
 - `CI` / `GITHUB_ACTIONS`: auto-selects `Config.ci` preset when no
   explicit stability flag is passed.
