@@ -1,0 +1,6 @@
+(library
+ (name thumper_clock)
+ (public_name thumper.clock)
+ (foreign_stubs
+  (language c)
+  (names clock_stubs)))

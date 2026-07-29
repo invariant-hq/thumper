@@ -1,0 +1,20 @@
+(executable
+ (name bench_gate)
+ (libraries thumper))
+
+; The regression gate. Measurement runs on its own manual alias — plain
+; `dune build` and `dune runtest` never measure — serialized across the
+; workspace by (locks bench) so concurrent suites don't time each other's
+; contention. The executable's default subcommand, check, measures and
+; writes gate.thumper.corrected iff it has something to propose; diff? then
+; hands that candidate to dune, and `dune promote` accepts it into the
+; source tree. An unchanged exe + baseline is a cache hit: no
+; re-measurement, exactly like a passing test.
+
+(rule
+ (alias bench)
+ (locks bench)
+ (action
+  (progn
+   (run %{exe:bench_gate.exe})
+   (diff? gate.thumper gate.thumper.corrected))))

@@ -1,0 +1,7 @@
+; The smallest thumper suite is a plain executable — nothing else. No rule,
+; no alias, no baseline: run it by hand (see bench_hello.ml). Wiring the
+; executable into the build as a regression gate is example 02.
+
+(executable
+ (name bench_hello)
+ (libraries thumper))

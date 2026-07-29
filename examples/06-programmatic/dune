@@ -1,0 +1,7 @@
+; The library without the CLI: this executable never parses argv — it calls
+; measure / Check.run / Verdict / Baseline directly. Run it with
+;   dune exec examples/06-programmatic/programmatic.exe
+
+(executable
+ (name programmatic)
+ (libraries thumper))

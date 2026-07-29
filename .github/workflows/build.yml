@@ -1,0 +1,44 @@
+name: Build and test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          # Unix-only by design (fork-per-case measurement, lockf lease).
+          - ubuntu-latest
+          - macos-latest
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout tree
+        uses: actions/checkout@v4
+
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+
+      - name: Install OCaml dependencies
+        run: opam install . --deps-only --with-test
+
+      - name: Build and test
+        run: |
+          opam exec -- dune build
+          opam exec -- dune build @runtest
+
+      # The golden stats corpus's dual-use check: regenerate in memory and
+      # byte-compare against the committed file (exit 1 on drift). scipy is
+      # absent on runners; the script degrades to the byte check, which is
+      # the part CI must enforce — testing.md makes it part of the safety
+      # story for the highest-validation-risk module.
+      - name: Verify the stats corpus is generator-identical
+        run: python3 test/tools/gen_stats_corpus.py

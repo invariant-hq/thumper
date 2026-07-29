@@ -1,0 +1,11 @@
+# thumper baseline v1
+# suite: digest
+
+# machine: 9f3a1c2e8b4d6a07
+# host: mbp-tmattio · Apple M1 Max · arm64 · macos
+# ocaml: 5.5.0 · 64-bit · release
+
+sha256/incremental-1mib	alloc_words	exact	399
+sha256/incremental-1mib	wall_time	batch=1	n=20	5.063e-03	5.021e-03 5.024e-03 5.028e-03 5.031e-03 5.035e-03 5.039e-03 5.044e-03 5.049e-03 5.054e-03 5.060e-03 5.066e-03 5.073e-03 5.081e-03 5.090e-03 5.101e-03 5.115e-03 5.133e-03 5.158e-03 5.197e-03 5.288e-03
+sha256/string-64	alloc_words	exact	54
+sha256/string-64	wall_time	batch=8192	n=20	6.911e-07	6.883e-07 6.887e-07 6.888e-07 6.891e-07 6.893e-07 6.898e-07 6.901e-07 6.904e-07 6.907e-07 6.910e-07 6.913e-07 6.917e-07 6.921e-07 6.926e-07 6.930e-07 6.942e-07 6.958e-07 6.977e-07 7.012e-07 7.084e-07

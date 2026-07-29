@@ -1,0 +1,12 @@
+(executable
+ (name bench_fixture)
+ (modules bench_fixture)
+ (libraries thumper unix))
+
+; The deterministic lease holder behind lease.t's contention scenario:
+; acquires via the library's own lease, signals through a sentinel file,
+; holds until a release file appears. Timing-free by construction.
+(executable
+ (name hold_lease)
+ (modules hold_lease)
+ (libraries thumper unix))

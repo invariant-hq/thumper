@@ -1,0 +1,8 @@
+; Compile-checks for doc/manual/: every OCaml snippet in the manual is
+; mirrored in manual_snippets.ml, so a snippet that rots breaks the build.
+; Build-only — nothing links or runs this library, so no snippet ever
+; measures under runtest.
+
+(library
+ (name thumper_manual_snippets)
+ (libraries thumper))

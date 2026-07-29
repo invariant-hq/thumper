@@ -1,0 +1,12 @@
+; The documented rule shape: measure, then hand dune the candidate to
+; diff. No (universe), no no-infer copy: an unchanged exe + baseline is a
+; cache hit, and diff? tolerates the candidate's absence on a pass.
+; (--quick keeps the cram scenario fast; the shipped template is flagless.)
+
+(rule
+ (alias bench)
+ (locks bench)
+ (action
+  (progn
+   (run %{exe:bench.exe} --quick)
+   (diff? fixture.thumper fixture.thumper.corrected))))

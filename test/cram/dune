@@ -1,0 +1,16 @@
+; The cram suite is the executable specification of the CLI. Every scenario
+; drives the deterministic
+; fixture executable with THUMPER_MACHINE=testkey and a sandbox-local
+; THUMPER_LOCK_DIR, and asserts exit codes, file effects, and sanitized
+; output shapes — never timings.
+;
+; (locks measurement) serializes the scenarios: each one runs real (if tiny)
+; measurements, and a dozen concurrent spinning workers would push the load
+; average over the environment gate's threshold on any host — the suite would
+; flake itself into inconclusive. Scenarios whose assertions need a quiet
+; host additionally pass --wait-quiet to ride out ambient load spikes.
+
+(cram
+ (applies_to :whole_subtree)
+ (locks measurement)
+ (deps fixture/bench_fixture.exe fixture/hold_lease.exe))

@@ -1,0 +1,92 @@
+; Unit suites for the library's internal modules reach them through
+; [Thumper.Private] — the facade's unconstrained re-export of the internals
+; for this suite. No test compiles its own copy of a library unit: the
+; library is built once and linked, so an edit to any lib/ source rebuilds
+; exactly the tests that depend on it, under the library's own flags.
+;
+; Each test lists only the libraries its own source references
+; (implicit_transitive_deps is false): [thumper] for the internals, [unix]
+; where the test itself calls [Unix.*], [windtrap] everywhere.
+
+(test
+ (name test_thumper)
+ ; Public-surface integration: only the installed [Thumper] facade (plus
+ ; unix for the THUMPER_MACHINE override the gate-flow test pins). The
+ ; [Deleted_surface] pins compile against the public modules, which stay
+ ; constrained regardless of what [Thumper.Private] re-exports.
+ (modules test_thumper)
+ (libraries thumper unix windtrap))
+
+(test
+ (name test_clock)
+ (modules test_clock)
+ (libraries thumper_clock unix windtrap))
+
+(test
+ (name test_metric)
+ (modules test_metric)
+ (libraries thumper windtrap))
+
+(test
+ (name test_budget)
+ (modules test_budget)
+ (libraries thumper windtrap))
+
+(test
+ (name test_run)
+ (modules test_run)
+ (libraries thumper windtrap))
+
+(test
+ (name test_config)
+ (modules test_config)
+ (libraries thumper windtrap))
+
+(test
+ (name test_bench)
+ (modules test_bench)
+ (libraries thumper windtrap))
+
+(test
+ (name test_env)
+ (modules test_env)
+ (libraries thumper unix windtrap))
+
+(test
+ (name test_baseline)
+ ; The format fixtures (the spec's verbatim sample, pre-rewrite files, the empty
+ ; file) are runtime dependencies.
+ (modules test_baseline)
+ (libraries thumper unix windtrap)
+ (deps
+  (glob_files fixtures/*)))
+
+(test
+ (name test_measure)
+ (modules test_measure)
+ (libraries thumper windtrap))
+
+(test
+ (name test_verdict)
+ (modules test_verdict)
+ (libraries thumper windtrap))
+
+(test
+ (name test_check)
+ (modules test_check)
+ (libraries thumper unix windtrap))
+
+(test
+ (name test_cli)
+ ; The cram fixture executable is a runtime dependency: the end-to-end
+ ; default-path test invokes it through its _build path.
+ (modules test_cli)
+ (libraries thumper unix windtrap)
+ (deps cram/fixture/bench_fixture.exe))
+
+(test
+ (name test_stats)
+ ; The golden corpus is a runtime dependency.
+ (modules test_stats)
+ (libraries thumper windtrap)
+ (deps golden/stats.tsv))

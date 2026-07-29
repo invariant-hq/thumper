@@ -1,0 +1,6 @@
+; Budgets bind at check time, so this example is best driven by hand with a
+; scratch baseline (see ../README.md) — no @bench rule here.
+
+(executable
+ (name bench_budgets)
+ (libraries thumper))
