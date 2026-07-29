@@ -38,10 +38,11 @@ as a crash.
 
 A hung case (hang mode spins forever under a 1 s per-case deadline): the
 parent-side wait bound turns a wedged case into a deadline error — exit 2,
-never a wedged run. The scenario's budget is sixty times the deadline; the
+never a wedged run. The deadline itself is the bound under test (a
+regression here wedges until the CI job timeout — the backstop); the
 assertion is termination and classification, never a timing.
 
-  $ THUMPER_FIXTURE_MODE=hang timeout 60 $FIX check --quick -f err/raise > hang.log 2>&1
+  $ THUMPER_FIXTURE_MODE=hang $FIX check --quick -f err/raise > hang.log 2>&1
   [2]
   $ grep -q 'exceeded its deadline' hang.log && echo deadline-named
   deadline-named
