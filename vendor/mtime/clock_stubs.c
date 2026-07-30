@@ -12,9 +12,11 @@
    declaration visible under strict -std= modes, where an implicit
    declaration is a hard error on modern compilers.
 
-   Vendoring notes: ocaml_mtime_clock_period_ns is defined in every tier
-   but bound by no external on the OCaml side — kept unmodified to
-   minimize the diff against upstream. The Windows tier is likewise
+   Vendoring notes: every stub symbol is renamed from upstream's
+   ocaml_mtime_clock_* to ocaml_thumper_clock_* — a consumer may link both
+   thumper and the real mtime, and identical C symbols in two archives are
+   a hard link error. ocaml_thumper_clock_period_ns is defined in every
+   tier but bound by no external on the OCaml side. The Windows tier is likewise
    upstream-verbatim and dead by declared scope (architecture.md scopes
    Windows out); it uses legacy Begin_roots and caml_copy_int64 of a
    double-valued frequency, and needs review before any Windows work. */
@@ -69,7 +71,7 @@
 
 static mach_timebase_info_data_t scale = {0};
 
-void ocaml_mtime_clock_init_scale (void)
+void ocaml_thumper_clock_init_scale (void)
 {
   if (mach_timebase_info (&scale) != KERN_SUCCESS)
     OCAML_MTIME_RAISE_SYS_ERROR ("mach_timebase_info () failed");
@@ -78,25 +80,25 @@ void ocaml_mtime_clock_init_scale (void)
     OCAML_MTIME_RAISE_SYS_ERROR ("mach_timebase_info_data.denom is 0");
 }
 
-CAMLprim value ocaml_mtime_clock_elapsed_ns (value unit)
+CAMLprim value ocaml_thumper_clock_elapsed_ns (value unit)
 {
   CAMLparam1 (unit);
   static uint64_t start = 0L;
   if (start == 0L) { start = mach_absolute_time (); }
-  if (scale.denom == 0) { ocaml_mtime_clock_init_scale (); }
+  if (scale.denom == 0) { ocaml_thumper_clock_init_scale (); }
   uint64_t now = mach_absolute_time ();
   CAMLreturn (caml_copy_int64 (((now - start) * scale.numer) / scale.denom));
 }
 
-CAMLprim value ocaml_mtime_clock_now_ns (value unit)
+CAMLprim value ocaml_thumper_clock_now_ns (value unit)
 {
   CAMLparam1 (unit);
-  if (scale.denom == 0) { ocaml_mtime_clock_init_scale (); }
+  if (scale.denom == 0) { ocaml_thumper_clock_init_scale (); }
   uint64_t now = mach_absolute_time ();
   CAMLreturn (caml_copy_int64 ((now * scale.numer) / scale.denom));
 }
 
-CAMLprim value ocaml_mtime_clock_period_ns (value unit)
+CAMLprim value ocaml_thumper_clock_period_ns (value unit)
 { return Val_none; }
 
 /* POSIX */
@@ -115,7 +117,7 @@ CAMLprim value ocaml_mtime_clock_period_ns (value unit)
    CLOCK_MONOTONIC: it is a general-purpose timestamp, not used by
    measurement. */
 
-CAMLprim value ocaml_mtime_clock_elapsed_ns (value unit)
+CAMLprim value ocaml_thumper_clock_elapsed_ns (value unit)
 {
   CAMLparam1 (unit);
   static struct timespec start = {0};
@@ -149,7 +151,7 @@ CAMLprim value ocaml_mtime_clock_elapsed_ns (value unit)
                                (uint64_t)(now.tv_nsec - start.tv_nsec)));
 }
 
-CAMLprim value ocaml_mtime_clock_now_ns (value unit)
+CAMLprim value ocaml_thumper_clock_now_ns (value unit)
 {
   struct timespec now;
 
@@ -161,7 +163,7 @@ CAMLprim value ocaml_mtime_clock_now_ns (value unit)
                           (uint64_t)(now.tv_nsec));
 }
 
-CAMLprim value ocaml_mtime_clock_period_ns (value unit)
+CAMLprim value ocaml_thumper_clock_period_ns (value unit)
 {
   CAMLparam1 (unit);
   CAMLlocal1 (some);
@@ -197,7 +199,7 @@ static void set_performance_frequency(void)
   performance_frequency = (1000000000.0 / t_freq.QuadPart);
 }
 
-CAMLprim value ocaml_mtime_clock_elapsed_ns (value unit)
+CAMLprim value ocaml_thumper_clock_elapsed_ns (value unit)
 {
   (void) unit;
   static LARGE_INTEGER start;
@@ -218,7 +220,7 @@ CAMLprim value ocaml_mtime_clock_elapsed_ns (value unit)
   return caml_copy_int64(ret);
 }
 
-CAMLprim value ocaml_mtime_clock_now_ns (value unit)
+CAMLprim value ocaml_thumper_clock_now_ns (value unit)
 {
   (void) unit;
   if (performance_frequency == 0.0) {
@@ -232,7 +234,7 @@ CAMLprim value ocaml_mtime_clock_now_ns (value unit)
   return caml_copy_int64(ret);
 }
 
-CAMLprim value ocaml_mtime_clock_period_ns (value unit)
+CAMLprim value ocaml_thumper_clock_period_ns (value unit)
 {
   (void) unit;
   if (performance_frequency == 0.0) {
@@ -257,13 +259,13 @@ CAMLprim value ocaml_mtime_clock_period_ns (value unit)
 
 #warning OCaml Mtime_clock module: unsupported platform
 
-CAMLprim value ocaml_mtime_clock_elapsed_ns (value unit)
+CAMLprim value ocaml_thumper_clock_elapsed_ns (value unit)
 { OCAML_MTIME_RAISE_SYS_ERROR ("unsupported platform"); }
 
-CAMLprim value ocaml_mtime_clock_now_ns (value unit)
+CAMLprim value ocaml_thumper_clock_now_ns (value unit)
 { OCAML_MTIME_RAISE_SYS_ERROR ("unsupported platform"); }
 
-CAMLprim value ocaml_mtime_clock_period_ns (value unit)
+CAMLprim value ocaml_thumper_clock_period_ns (value unit)
 { OCAML_MTIME_RAISE_SYS_ERROR ("unsupported platform"); }
 
 #endif
