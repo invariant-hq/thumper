@@ -569,7 +569,7 @@ let bless_states =
 let golden_path name = strf "test/unit/report/%s.txt" name
 
 let matches_its_golden s =
-  expect_file (s.report ~color:false) (golden_path s.golden)
+  expect_file ~file:(golden_path s.golden) (s.report ~color:false)
 
 (* The report with every CSI sequence removed: ESC, [, parameter and
    intermediate bytes, one final byte. *)
@@ -597,11 +597,10 @@ let escapes_removed_give_the_unstyled_report s =
 
 let gallery name states =
   [
-    cases ~name:(fun s -> s.claim) name states matches_its_golden;
-    cases
-      ~name:(fun s -> s.golden)
-      "removing the escapes gives the unstyled report" states
-      escapes_removed_give_the_unstyled_report;
+    cases name ~id:(fun s -> s.claim) states matches_its_golden;
+    cases "removing the escapes gives the unstyled report"
+      ~id:(fun s -> s.golden)
+      states escapes_removed_give_the_unstyled_report;
   ]
 
 (* The status line *)
@@ -612,7 +611,7 @@ let status_line =
   group "The status line"
     [
       cases "status_redraw draws the index, the case and the sweep"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         [
           ( "measuring",
             progress `Measuring 3 6 "busy/spin",
@@ -632,7 +631,7 @@ let shell_arg =
   group "shell_arg"
     [
       cases "an argument of plain bytes stays bare, any other is quoted"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         [
           ("a path", "./_build/default/bench.exe", "./_build/default/bench.exe");
           ("every plain punctuation", "_.:/@%+=,-", "_.:/@%+=,-");
@@ -938,9 +937,9 @@ let check_report =
     @ [
         test "a styled report prints its escapes" (fun () ->
             expect_file
-              (Report.check (render ~color:true ()) (mixed ()))
-              (golden_path "mixed-styled"));
-        cases "the accept line blesses the passing cases with news" ~name:first4
+              ~file:(golden_path "mixed-styled")
+              (Report.check (render ~color:true ()) (mixed ())));
+        cases "the accept line blesses the passing cases with news" ~id:first4
           accept_lines (fun (_, flags, verdict, line) ->
             let report = Report.check (render ~flags ()) (verdict ()) in
             match line with
@@ -953,7 +952,7 @@ let check_report =
         test "a hint stays on one line however long"
           a_long_hint_stays_on_one_line;
         cases "an inconclusive reason joins the hint that is its remedy"
-          ~name:first4 remedies hints_of_a_reason;
+          ~id:first4 remedies hints_of_a_reason;
         test "a rerun for noise alone repeats the run's flags and patterns"
           (fun () ->
             contains ~sub:"\nrerun: bench.exe --quick -f un -f 'a b'\n"
@@ -963,7 +962,7 @@ let check_report =
         test "a failing run's rerun names the failing cases alone" (fun () ->
             contains ~sub:"\nrerun: bench.exe -f alpha\n"
               (Report.check (render ()) (failing_and_unconfirmed ())));
-        cases "a duration prints as windtrap's" ~name:first durations
+        cases "a duration prints as windtrap's" ~id:first durations
           (fun (_, secs, text) -> equal string text (Report.duration_str secs));
         test "the load names its threshold" (fun () ->
             equal string "load 7.9 on 8 cores, over 4.0"
@@ -973,26 +972,26 @@ let check_report =
               (Report.check (render ()) (failing_cases 10)));
         test "past ten failing cases the run's patterns select"
           past_ten_cases_the_patterns_select;
-        cases "a column no case fills is left out" ~name:first absent_columns
+        cases "a column no case fills is left out" ~id:first absent_columns
           (fun (_, trial, row) ->
             contains ~sub:row
               (Report.check (render ()) (verdict_of (bcase "alpha", trial ()))));
-        cases "each unit starts at its own magnitude" ~name:first units
+        cases "each unit starts at its own magnitude" ~id:first units
           (fun (_, trial, cell) ->
             contains ~sub:cell
               (Report.check (render ()) (verdict_of (bcase "alpha", trial ()))));
-        cases "a cap prints grouped, never in exponent notation" ~name:first5
-          caps a_cap_prints_grouped;
-        cases "the summary counts a proposed case apart" ~name:first summaries
+        cases "a cap prints grouped, never in exponent notation" ~id:first5 caps
+          a_cap_prints_grouped;
+        cases "the summary counts a proposed case apart" ~id:first summaries
           (fun (_, strict, summary) ->
             contains ~sub:summary
               (Report.check (render ~strict ()) (one_proposed ())));
-        cases "each summary term has its colour" ~name:first4 summary_colours
+        cases "each summary term has its colour" ~id:first4 summary_colours
           (fun (_, verdict, strict, summary) ->
             contains ~sub:summary
               (Report.check (render ~color:true ~strict ()) (verdict ())));
         cases "a recorded identity is quoted when it holds a control byte"
-          ~name:first recorded_identities (fun (_, recorded, header) ->
+          ~id:first recorded_identities (fun (_, recorded, header) ->
             equal string header (header_of_stale recorded));
       ])
 

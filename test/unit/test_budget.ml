@@ -100,22 +100,22 @@ let constructors =
   group "Constructors"
     [
       cases "relative bounds its metric by r"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         relatives
         (fun (_, b, expected) ->
           equal (pair string contract) expected (shown (b ())));
       cases "the shorthands"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         shorthands
         (fun (_, shorthand, expected) ->
           equal budget (expected ()) (shorthand ()));
       cases "at_most caps a counter metric"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         caps
         (fun (_, b, expected) ->
           equal (pair string contract) expected (shown (b ())));
       cases "a constructor refuses"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         refusals
         (fun (_, f, pos) -> expect (require_some (refusal f)) pos);
     ]
@@ -147,7 +147,7 @@ let observers =
 let defaults =
   group "Defaults"
     [
-      cases "default m is relative 0.05 on m" ~name:Metric.id
+      cases "default m is relative 0.05 on m" ~id:Metric.id
         [ Metric.wall_time; Metric.major_collections ] (fun m ->
           equal (pair string contract)
             (Metric.id m, Budget.Relative 0.05)

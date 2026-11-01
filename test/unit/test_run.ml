@@ -60,7 +60,7 @@ let sampled_evidence =
   group "Sampled evidence"
     [
       cases "sampled keeps a copy of"
-        ~name:(fun (name, _) -> name)
+        ~id:(fun (name, _) -> name)
         [
           ("an ascending vector", [| 1.; 2.; 3. |]); ("ties", [| 1.; 1.; 1. |]);
         ]
@@ -70,7 +70,7 @@ let sampled_evidence =
           input.(0) <- 99.;
           equal (array float_exact) values s.Run.sorted);
       cases "sampled refuses"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         refused_vectors
         (fun (_, values, pos) ->
           expect (require_some (refusal (fun () -> sampled values))) pos);
@@ -122,11 +122,11 @@ let trials =
           equal (option measurement) (Some one_two_three)
             (Run.Trial.measurement t Metric.alloc_words));
       cases "make refuses"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         refused_trials
         (fun (_, f, pos) -> expect (require_some (refusal f)) pos);
       cases "measurement finds a metric's evidence"
-        ~name:(fun (m, _) -> Metric.id m)
+        ~id:(fun (m, _) -> Metric.id m)
         [
           (Metric.wall_time, Some one_two_three);
           (Metric.alloc_words, Some (Run.Exact 54));
@@ -177,7 +177,7 @@ let runs =
           equal (list string) [] (Run.case_ids r);
           equal (option int) None (Run.exact r ~case:"a" Metric.alloc_words));
       cases "samples"
-        ~name:(fun (name, _, _, _) -> name)
+        ~id:(fun (name, _, _, _) -> name)
         [
           ("a sampled metric", "a", Metric.wall_time, Some [| 1.; 2.; 3. |]);
           ("an absent case", "c", Metric.wall_time, None);
@@ -191,7 +191,7 @@ let runs =
             (Run.samples (two_cases ()) ~case m));
       test "samples returns a copy" samples_is_a_copy;
       cases "exact"
-        ~name:(fun (name, _, _, _) -> name)
+        ~id:(fun (name, _, _, _) -> name)
         [
           ("an exact metric", "a", Metric.alloc_words, Some 54);
           ("an absent case", "c", Metric.alloc_words, None);
@@ -201,7 +201,7 @@ let runs =
         (fun (_, case, m, expected) ->
           equal (option int) expected (Run.exact (two_cases ()) ~case m));
       cases "warnings"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         [ ("a case's trial", "b", [ "w1"; "w2" ]); ("an absent case", "c", []) ]
         (fun (_, case, expected) ->
           equal (list string) expected (Run.warnings (two_cases ()) ~case));

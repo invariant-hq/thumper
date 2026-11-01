@@ -6,13 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-# windtrap 0.2.0 is not on opam until ocaml/opam-repository#30817 merges. A
-# pin without a version takes the version opam knows (0.1.0), so the pin
-# names it. Remove this, the steps that use it and dune-project's (pin) once
-# #30817 merges.
-env:
-  WINDTRAP_PIN: windtrap.0.2.0 git+https://github.com/invariant-hq/windtrap.git#v0.2.0
-
 jobs:
   build:
     strategy:
@@ -36,9 +29,6 @@ jobs:
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
-
-      - name: Pin windtrap
-        run: opam pin add -n ${{ env.WINDTRAP_PIN }}
 
       - name: Install OCaml dependencies
         run: opam install . --deps-only --with-test
@@ -68,9 +58,6 @@ jobs:
 
       - name: Install the lowest dune
         run: opam install dune.3.21.0
-
-      - name: Pin windtrap
-        run: opam pin add -n ${{ env.WINDTRAP_PIN }}
 
       - name: Install OCaml dependencies
         run: opam install . --deps-only --with-test

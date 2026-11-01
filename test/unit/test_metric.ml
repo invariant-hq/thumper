@@ -100,7 +100,7 @@ let described_builtins =
 
 let builtin_metrics =
   cases "Built-in metrics"
-    ~name:(fun (m, _) -> Metric.id m)
+    ~id:(fun (m, _) -> Metric.id m)
     described_builtins
     (fun (m, expected) -> equal string expected (described m))
 

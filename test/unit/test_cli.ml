@@ -479,18 +479,18 @@ let the_help_names_the_program () =
 let command_lines =
   group "Command lines and options"
     [
-      cases "a usage error" ~name:fst usage_errors refuses;
-      cases "list selects" ~name:fst listings (fun (_, o) ->
+      cases "a usage error" ~id:fst usage_errors refuses;
+      cases "list selects" ~id:fst listings (fun (_, o) ->
           let dir = state_env () in
           check_outcome dir o (main o.args));
       test "-h prints every flag" help_prints_every_flag;
       cases "-h and -V end the reading"
-        ~name:(fun (n, _, _) -> n)
+        ~id:(fun (n, _, _) -> n)
         ends_the_reading
         (fun (_, args, line) ->
           let (_ : string) = state_env () in
           equal ~msg:"exit code" int 0 (main args);
-          starts_with ~affix:line (output ()));
+          starts_with ~prefix:line (output ()));
       test "the help names the program by its file name"
         the_help_names_the_program;
     ]
@@ -605,9 +605,10 @@ let report_variant (_, setup, present, absent) =
 let terminal =
   group "Terminal output"
     [
-      cases ~tags:[ "slow" ] ~timeout:60. "the report a failing run prints"
-        ~name:(fun (n, _, _, _) -> n)
-        variants report_variant;
+      slow
+      @@ cases ~timeout:60. "the report a failing run prints"
+           ~id:(fun (n, _, _, _) -> n)
+           variants report_variant;
     ]
 
 (* Paths and dune rule actions *)
@@ -822,9 +823,9 @@ let maps_layout (_, env, cwd, exe, dirs, expected) =
 let paths =
   group "Paths and dune rule actions"
     [
-      cases "bless's pre-flight names the path" ~name:fst places resolves;
+      cases "bless's pre-flight names the path" ~id:fst places resolves;
       cases "default_baseline_dir maps an executable's layout"
-        ~name:(fun (n, _, _, _, _, _) -> n)
+        ~id:(fun (n, _, _, _, _, _) -> n)
         layouts maps_layout;
     ]
 
@@ -1075,7 +1076,7 @@ let without_a_baseline () =
   contains ~sub:"\naccept: bench.exe bless\n" out;
   equal ~msg:"no baseline" (list string) [ "v.json" ]
     (Array.to_list (Sys.readdir "."));
-  ends_with ~msg:"the --json document" ~affix:"}\n" (read_file "v.json")
+  ends_with ~msg:"the --json document" ~suffix:"}\n" (read_file "v.json")
 
 (* The seconds the summary's [in <duration>] states, [ms] or [s]. *)
 let summary_seconds out =
@@ -1143,7 +1144,7 @@ let a_partial_bless () =
   equal ~msg:"exit code" int 0
     (main ~config:fast_config [ "bless"; "-f"; "alpha"; "--force" ]);
   let out = output () in
-  starts_with ~affix:"digest: 1 case for machine testkey\n" out;
+  starts_with ~prefix:"digest: 1 case for machine testkey\n" out;
   contains ~sub:"\n1 blessed into digest.thumper in " out;
   not_contains ~sub:"accept:" out;
   equal ~msg:"the selected case's rows beside the others" (list string)
@@ -1305,20 +1306,20 @@ let running =
   group "Running a command line"
     [
       cases "raises before reading argv"
-        ~name:(fun (n, _, _, _, _) -> n)
+        ~id:(fun (n, _, _, _, _) -> n)
         refusals
         (fun (_, name, budgets, args, exn) ->
           raises exn (fun () -> main ~name ~budgets args));
-      cases "a stop" ~name:fst stops stops_the_run;
+      cases "a stop" ~id:fst stops stops_the_run;
       test ~timeout:60. (fst a_raising_case) (fun () ->
           stops_the_run a_raising_case);
       test "a --json path under a file stops as not a directory"
         a_json_path_under_a_file;
       test "list reads neither the baseline nor THUMPER_MACHINE"
         list_reads_no_baseline_and_no_key;
-      cases "check first removes the stale --json document" ~name:fst
+      cases "check first removes the stale --json document" ~id:fst
         first_removals removes_the_stale_document;
-      cases "the other runs keep the stale --json document" ~name:fst
+      cases "the other runs keep the stale --json document" ~id:fst
         [
           ("-h", [ "-h" ]);
           ("-V", [ "-V" ]);
@@ -1329,36 +1330,53 @@ let running =
         keeps_the_stale_document;
       test "bless's pre-flight stops before it takes the lock"
         stops_before_the_lock;
-      cases ~tags:[ "slow" ] ~timeout:60. "a preset sets the samples"
-        ~name:(fun (n, _, _) -> n)
-        presets samples_of_a_preset;
-      slow ~timeout:60.
-        "check without a baseline proposes and writes --json alone"
-        without_a_baseline;
-      slow ~timeout:60. "the summary states the run's duration"
-        the_summary_states_the_run's_duration;
-      slow ~timeout:60. "--strict fails a run that proposes"
-        strict_fails_a_proposal;
-      slow ~timeout:60. "check and bless --force measure after --wait-quiet 0"
-        wait_quiet_zero;
-      slow ~timeout:60. "a baseline bless cannot write stops before the report"
-        a_late_write_failure_under_bless;
-      slow ~timeout:60. "a partial bless re-records the selected cases"
-        a_partial_bless;
-      slow ~timeout:60. "a partial bless of a stale section replaces it"
-        a_partial_bless_of_a_stale_section;
-      slow ~timeout:60. "a full bless prunes the rows of a case the suite lost"
-        a_full_bless_prunes;
-      slow ~timeout:60. "check writes no baseline, an improvement included"
-        check_writes_no_baseline;
-      cases ~tags:[ "slow" ] ~timeout:60. "the rerun line names the executable"
-        ~name:(fun (n, _, _, _) -> n)
-        executables names_the_executable;
-      slow ~timeout:60. "the rerun line repeats --quick, --baseline and --tag"
-        the_rerun_line_repeats_the_flags;
-      cases ~tags:[ "slow" ] ~timeout:60. "a rule action's hints"
-        ~name:(fun (n, _, _, _) -> n)
-        roots pastes_from_the_root;
+      slow
+      @@ cases ~timeout:60. "a preset sets the samples"
+           ~id:(fun (n, _, _) -> n)
+           presets samples_of_a_preset;
+      slow
+      @@ test ~timeout:60.
+           "check without a baseline proposes and writes --json alone"
+           without_a_baseline;
+      slow
+      @@ test ~timeout:60. "the summary states the run's duration"
+           the_summary_states_the_run's_duration;
+      slow
+      @@ test ~timeout:60. "--strict fails a run that proposes"
+           strict_fails_a_proposal;
+      slow
+      @@ test ~timeout:60.
+           "check and bless --force measure after --wait-quiet 0"
+           wait_quiet_zero;
+      slow
+      @@ test ~timeout:60.
+           "a baseline bless cannot write stops before the report"
+           a_late_write_failure_under_bless;
+      slow
+      @@ test ~timeout:60. "a partial bless re-records the selected cases"
+           a_partial_bless;
+      slow
+      @@ test ~timeout:60. "a partial bless of a stale section replaces it"
+           a_partial_bless_of_a_stale_section;
+      slow
+      @@ test ~timeout:60.
+           "a full bless prunes the rows of a case the suite lost"
+           a_full_bless_prunes;
+      slow
+      @@ test ~timeout:60. "check writes no baseline, an improvement included"
+           check_writes_no_baseline;
+      slow
+      @@ cases ~timeout:60. "the rerun line names the executable"
+           ~id:(fun (n, _, _, _) -> n)
+           executables names_the_executable;
+      slow
+      @@ test ~timeout:60.
+           "the rerun line repeats --quick, --baseline and --tag"
+           the_rerun_line_repeats_the_flags;
+      slow
+      @@ cases ~timeout:60. "a rule action's hints"
+           ~id:(fun (n, _, _, _) -> n)
+           roots pastes_from_the_root;
     ]
 
 let () = exit (run "cli" [ command_lines; terminal; paths; running ])

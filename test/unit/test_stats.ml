@@ -99,7 +99,7 @@ let corpus =
 
 let corpus_cases name select check =
   cases name
-    ~name:(fun (line, _) -> Printf.sprintf "line %d" line)
+    ~id:(fun (line, _) -> Printf.sprintf "line %d" line)
     (List.filter_map
        (fun (line, r) -> Option.map (fun x -> (line, x)) (select r))
        corpus)
@@ -196,7 +196,7 @@ let location =
           at_most exactly ~than:narrow.lower wide.lower;
           at_most exactly ~than:wide.upper narrow.upper);
       cases "median_ci_sorted of the ranks 1 to n"
-        ~name:(fun (name, _, _, _) -> name)
+        ~id:(fun (name, _, _, _) -> name)
         [
           ( "20 at 0.05 is the 6th and 15th values",
             20,
@@ -214,7 +214,7 @@ let location =
         (fun (_, n, alpha, expected) ->
           equal interval expected (Stats.median_ci_sorted ~alpha (ranks n)));
       cases "refuses"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         median_refusals
         (fun (_, f, msg) -> raises (Invalid_argument msg) f);
     ]
@@ -306,7 +306,7 @@ let quality =
         (function Severe (v, s) -> Some (v, s) | _ -> None)
         (fun (v, s) -> equal bool s (Stats.severe_outlier_inflation_sorted v));
       cases "severe_outlier_inflation_sorted"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         severe_rows
         (fun (_, v, expected) ->
           equal bool expected (Stats.severe_outlier_inflation_sorted v));
@@ -324,7 +324,7 @@ let quality =
       (* One tie in [1; 2] against [2; 3]: U = 1/2, P(U <= 0) = 1/6 and
          P(U >= 1) = 5/6. *)
       cases "drifted's p-value is exact"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         [
           ("3 below 3 is 2/20", [| 1.; 2.; 3.; 4.; 5.; 6. |], 2. /. 20.);
           ("3 below 4 is 2/35", [| 1.; 2.; 3.; 4.; 5.; 6.; 7. |], 2. /. 35.);
@@ -337,7 +337,7 @@ let quality =
         (fun (x, n) ->
           equal bool false (Stats.drifted ~alpha:0.05 (Array.make n x)));
       cases "drifted at 0.01"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         drift_rows
         (fun (_, v, expected) ->
           equal bool expected (Stats.drifted ~alpha:0.01 v));
@@ -345,7 +345,7 @@ let quality =
          float nearest 2/35 lies below it; the float after the one nearest
          2/126 lies above it. Each is within 2^-52 of p, relatively. *)
       cases "drifted compares with alpha's exact value"
-        ~name:(fun (name, _, _, _) -> name)
+        ~id:(fun (name, _, _, _) -> name)
         [
           ("7 values at the float below p = 2/35", 7, 2. /. 35., false);
           ( "9 values at a float above p = 2/126",
@@ -356,7 +356,7 @@ let quality =
         (fun (_, n, alpha, expected) ->
           equal bool expected (Stats.drifted ~alpha (ranks n)));
       cases "refuses"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         quality_refusals
         (fun (_, f, msg) -> raises (Invalid_argument msg) f);
     ]
@@ -503,7 +503,7 @@ let comparison =
             (Stats.shift ~alpha_per_side:0.005 ~baseline:(Array.make m x)
                ~candidate:(Array.make n y)));
       cases "shift's Moses cutoff k"
-        ~name:(fun (name, _, _, _, _, _, _) -> name)
+        ~id:(fun (name, _, _, _, _, _, _) -> name)
         moses_rows
         (fun (_, alpha_per_side, m, n, estimate, lower, upper) ->
           let baseline = Array.init m (fun j -> -.float_of_int (n * j)) in
@@ -512,7 +512,7 @@ let comparison =
             { estimate; interval = { lower; upper } }
             (Stats.shift ~alpha_per_side ~baseline ~candidate));
       cases "refuses"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         comparison_refusals
         (fun (_, f, msg) -> raises (Invalid_argument msg) f);
     ]
@@ -537,7 +537,7 @@ let aggregation =
         (fun (x, n) ->
           equal approximately x (Stats.geometric_mean (Array.make n x)));
       cases "refuses"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         [
           ( "geometric_mean of no value",
             [||],

@@ -221,8 +221,9 @@ let a_backward_clock_gives_a_negative_sample () =
 let instruments =
   group "Instruments"
     [
-      slow "the real instruments prove a 2-word allocation exact in process"
-        real_instruments_prove_a_real_count;
+      slow
+      @@ test "the real instruments prove a 2-word allocation exact in process"
+           real_instruments_prove_a_real_count;
       test "a counter that decreases across the probe raises after the teardown"
         a_decreasing_counter_raises_after_the_teardown;
       test "a clock that runs backwards gives a negative sample"
@@ -416,7 +417,7 @@ let failures =
   group "Failures"
     [
       cases "pp_failure prints"
-        ~name:(fun (_, s) -> s)
+        ~id:(fun (_, s) -> s)
         printed_failures
         (fun (f, s) ->
           equal string s (Format.asprintf "%a" Measure.pp_failure f));
@@ -428,18 +429,26 @@ let failures =
         a_raising_teardown_keeps_the_first_failure;
       test "an in-process case past its deadline is Deadline_exceeded"
         past_the_deadline_in_process;
-      slow ~timeout:30. "a raise in a forked worker is Case_raised" forked_raise;
-      slow ~timeout:30.
-        "a forked worker that exits is Worker_died with its code" forked_exit;
-      slow ~timeout:30.
-        "a forked worker killed by a signal is Worker_died with its name"
-        forked_kill;
-      slow ~timeout:30. "a forked worker hung in one call is Deadline_exceeded"
-        forked_hang;
-      slow ~timeout:30. "a stopped worker is Worker_died, killed and reaped"
-        a_stopped_worker_is_killed_and_reaped;
-      slow ~timeout:30. "a refused fork is Worker_died and leaks no descriptor"
-        a_refused_fork_is_worker_died;
+      slow
+      @@ test ~timeout:30. "a raise in a forked worker is Case_raised"
+           forked_raise;
+      slow
+      @@ test ~timeout:30.
+           "a forked worker that exits is Worker_died with its code" forked_exit;
+      slow
+      @@ test ~timeout:30.
+           "a forked worker killed by a signal is Worker_died with its name"
+           forked_kill;
+      slow
+      @@ test ~timeout:30.
+           "a forked worker hung in one call is Deadline_exceeded" forked_hang;
+      slow
+      @@ test ~timeout:30. "a stopped worker is Worker_died, killed and reaped"
+           a_stopped_worker_is_killed_and_reaped;
+      slow
+      @@ test ~timeout:30.
+           "a refused fork is Worker_died and leaks no descriptor"
+           a_refused_fork_is_worker_died;
     ]
 
 (* Measuring *)
@@ -750,7 +759,7 @@ let measuring =
       test "calibration doubles k until a batch lasts the floor"
         calibration_doubles_k;
       cases "a frozen k of 4"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         frozen_k_window
         (fun (_, dt_ns, k) ->
           let w = world () in
@@ -770,7 +779,7 @@ let measuring =
       test "a case's metrics replace the config's"
         case_metrics_replace_config_metrics;
       cases "drift"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         drift_rows
         (fun (_, drifted, step) ->
           let w = world () in
@@ -785,15 +794,16 @@ let measuring =
         the_probe_proves_a_count_at_k_8192;
       test "the probe runs at the frozen k when the timing recalibrates"
         the_probe_runs_at_the_frozen_k;
-      slow ~timeout:30.
-        "a forked probe runs at the frozen k when the timing recalibrates"
-        the_forked_probe_runs_at_the_frozen_k;
+      slow
+      @@ test ~timeout:30.
+           "a forked probe runs at the frozen k when the timing recalibrates"
+           the_forked_probe_runs_at_the_frozen_k;
       test "the probe proves the frozen k's count"
         the_probe_proves_the_frozen_k_count;
       test "a first run probes at the calibrated k"
         a_first_run_probes_at_the_calibrated_k;
       cases "a frozen k of 16 or 17 at a calibrated k of 1"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         probe_bound
         (fun (_, frozen, probe) ->
           let w = world () in
@@ -804,7 +814,7 @@ let measuring =
       test "a frozen k below the recalibrated one is the probe's"
         a_frozen_k_below_the_new_k_is_probed;
       cases "a count the probe cannot prove stays sampled"
-        ~name:(fun (name, _, _, _, _) -> name)
+        ~id:(fun (name, _, _, _, _) -> name)
         unprovable
         (fun (_, h, dt_ns, words, pos) ->
           let w = world () in
@@ -819,17 +829,19 @@ let measuring =
         a_changed_gc_parameter_is_warned;
       test "an infinite deadline removes the in-process cap"
         an_infinite_deadline_removes_the_cap;
-      slow ~timeout:30. "a forked worker never checks the deadline"
-        a_forked_worker_never_checks_the_deadline;
+      slow
+      @@ test ~timeout:30. "a forked worker never checks the deadline"
+           a_forked_worker_never_checks_the_deadline;
       cases "the teardown runs once"
-        ~name:(fun (name, _) -> name)
+        ~id:(fun (name, _) -> name)
         teardown_rows
         (fun (_, step) ->
           let w = world () and torn = ref 0 in
           ignore (measure w (torn_down w ~torn step));
           equal int 1 !torn);
-      slow ~timeout:30. "a forked case returns its trial through the pipe"
-        a_forked_case_returns_its_trial;
+      slow
+      @@ test ~timeout:30. "a forked case returns its trial through the pipe"
+           a_forked_case_returns_its_trial;
     ]
 
 (* The worker pipe protocol *)
@@ -1064,7 +1076,7 @@ let the_protocol =
             (written
                (Error
                   (Measure.Case_raised { case = "c"; exn = "Failure(\"a\nb\")" }))));
-      cases "write refuses a failure only the parent produces" ~name:fst
+      cases "write refuses a failure only the parent produces" ~id:fst
         [
           ("Worker_died", Measure.Worker_died { case = "c"; detail = "d" });
           ( "Deadline_exceeded",
@@ -1076,13 +1088,13 @@ let the_protocol =
                "Measure.Protocol.write: Deadline_exceeded and Worker_died are \
                 parent-side classifications") (fun () -> written (Error f)));
       cases "parse reads"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         wire_rows
         (fun (_, wire, expected) ->
           equal (result trial failure) (Ok expected)
             (Measure.Protocol.parse ~case:"c" ~metrics:both wire));
       cases "malformed output is Worker_died"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         malformed
         (fun (_, wire, pos) ->
           let detail =

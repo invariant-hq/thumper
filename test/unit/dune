@@ -83,16 +83,17 @@
  (action
   (progn
    (run %{test} --corrected)
-   (diff? test_verdict.ml test_verdict.ml.corrected)
-   (diff?
-    json/confirmed-regression.json
-    json/confirmed-regression.json.corrected)
-   (diff? json/environment.json json/environment.json.corrected)
-   (diff? json/exact-changes.json json/exact-changes.json.corrected)
-   (diff? json/exact.json json/exact.json.corrected)
-   (diff? json/no-comparison.json json/no-comparison.json.corrected)
-   (diff? json/passing.json json/passing.json.corrected)
-   (diff? json/unconfirmed.json json/unconfirmed.json.corrected))))
+   (concurrent
+    (diff? test_verdict.ml test_verdict.ml.corrected)
+    (diff?
+     json/confirmed-regression.json
+     json/confirmed-regression.json.corrected)
+    (diff? json/environment.json json/environment.json.corrected)
+    (diff? json/exact-changes.json json/exact-changes.json.corrected)
+    (diff? json/exact.json json/exact.json.corrected)
+    (diff? json/no-comparison.json json/no-comparison.json.corrected)
+    (diff? json/passing.json json/passing.json.corrected)
+    (diff? json/unconfirmed.json json/unconfirmed.json.corrected)))))
 
 (test
  (name test_check)
@@ -111,39 +112,40 @@
  (action
   (progn
    (run %{test} --corrected)
-   (diff? report/bless.txt report/bless.txt.corrected)
-   (diff? report/default-budget.txt report/default-budget.txt.corrected)
-   (diff? report/failing-first.txt report/failing-first.txt.corrected)
-   (diff? report/loaded-proposed.txt report/loaded-proposed.txt.corrected)
-   (diff? report/bless-forced.txt report/bless-forced.txt.corrected)
-   (diff? report/case-warning.txt report/case-warning.txt.corrected)
-   (diff? report/equivalent.txt report/equivalent.txt.corrected)
-   (diff? report/exact-alloc.txt report/exact-alloc.txt.corrected)
-   (diff? report/exact-regressed.txt report/exact-regressed.txt.corrected)
-   (diff? report/github.txt report/github.txt.corrected)
-   (diff? report/growth-from-zero.txt report/growth-from-zero.txt.corrected)
-   (diff? report/improved.txt report/improved.txt.corrected)
-   (diff? report/inconclusive.txt report/inconclusive.txt.corrected)
-   (diff? report/loaded.txt report/loaded.txt.corrected)
-   (diff? report/mixed.txt report/mixed.txt.corrected)
-   (diff? report/mixed-styled.txt report/mixed-styled.txt.corrected)
-   (diff? report/no-baseline.txt report/no-baseline.txt.corrected)
-   (diff?
-    report/no-baseline-loaded.txt
-    report/no-baseline-loaded.txt.corrected)
-   (diff?
-    report/over-cap-first-run.txt
-    report/over-cap-first-run.txt.corrected)
-   (diff? report/over-cap-new-row.txt report/over-cap-new-row.txt.corrected)
-   (diff? report/over-cap-sampled.txt report/over-cap-sampled.txt.corrected)
-   (diff? report/proposed-metric.txt report/proposed-metric.txt.corrected)
-   (diff? report/sampled-alloc.txt report/sampled-alloc.txt.corrected)
-   (diff?
-    report/sampled-alloc-small.txt
-    report/sampled-alloc-small.txt.corrected)
-   (diff? report/time-units.txt report/time-units.txt.corrected)
-   (diff? report/unconfirmed.txt report/unconfirmed.txt.corrected)
-   (diff? report/within-budget.txt report/within-budget.txt.corrected))))
+   (concurrent
+    (diff? report/bless.txt report/bless.txt.corrected)
+    (diff? report/default-budget.txt report/default-budget.txt.corrected)
+    (diff? report/failing-first.txt report/failing-first.txt.corrected)
+    (diff? report/loaded-proposed.txt report/loaded-proposed.txt.corrected)
+    (diff? report/bless-forced.txt report/bless-forced.txt.corrected)
+    (diff? report/case-warning.txt report/case-warning.txt.corrected)
+    (diff? report/equivalent.txt report/equivalent.txt.corrected)
+    (diff? report/exact-alloc.txt report/exact-alloc.txt.corrected)
+    (diff? report/exact-regressed.txt report/exact-regressed.txt.corrected)
+    (diff? report/github.txt report/github.txt.corrected)
+    (diff? report/growth-from-zero.txt report/growth-from-zero.txt.corrected)
+    (diff? report/improved.txt report/improved.txt.corrected)
+    (diff? report/inconclusive.txt report/inconclusive.txt.corrected)
+    (diff? report/loaded.txt report/loaded.txt.corrected)
+    (diff? report/mixed.txt report/mixed.txt.corrected)
+    (diff? report/mixed-styled.txt report/mixed-styled.txt.corrected)
+    (diff? report/no-baseline.txt report/no-baseline.txt.corrected)
+    (diff?
+     report/no-baseline-loaded.txt
+     report/no-baseline-loaded.txt.corrected)
+    (diff?
+     report/over-cap-first-run.txt
+     report/over-cap-first-run.txt.corrected)
+    (diff? report/over-cap-new-row.txt report/over-cap-new-row.txt.corrected)
+    (diff? report/over-cap-sampled.txt report/over-cap-sampled.txt.corrected)
+    (diff? report/proposed-metric.txt report/proposed-metric.txt.corrected)
+    (diff? report/sampled-alloc.txt report/sampled-alloc.txt.corrected)
+    (diff?
+     report/sampled-alloc-small.txt
+     report/sampled-alloc-small.txt.corrected)
+    (diff? report/time-units.txt report/time-units.txt.corrected)
+    (diff? report/unconfirmed.txt report/unconfirmed.txt.corrected)
+    (diff? report/within-budget.txt report/within-budget.txt.corrected)))))
 
 (test
  (name test_cli)
@@ -155,7 +157,8 @@
  (action
   (progn
    (run %{test} --corrected)
-   (diff? test_cli.ml test_cli.ml.corrected))))
+   (concurrent
+    (diff? test_cli.ml test_cli.ml.corrected)))))
 
 (test
  (name test_stats)

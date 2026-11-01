@@ -19,11 +19,6 @@
 
 (license ISC)
 
-(pin
- (url "git+https://github.com/invariant-hq/windtrap.git#v0.2.0")
- (package
-  (name windtrap)))
-
 (package
  (name thumper)
  (synopsis "Micro-benchmarks as regression tests for OCaml")
@@ -35,4 +30,4 @@
   (windtrap
    (and
     :with-test
-    (>= 0.2.0)))))
+    (>= 0.3.0)))))

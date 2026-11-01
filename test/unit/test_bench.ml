@@ -167,18 +167,18 @@ let constructors =
   group "Constructors"
     [
       cases "a case's id is the slug of its name"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         slugs
         (fun (_, name, id) ->
           equal string id (Bench.id (the_case [ Bench.bench name noop ])));
       cases "an explicit id is the segment and the name is kept"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         explicit_ids
         (fun (_, id, name) ->
           let c = the_case [ Bench.bench ~id name noop ] in
           equal (pair string string) (id, name) (Bench.id c, Bench.full_name c));
       cases "a malformed node is refused, naming its constructor"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         refusals
         (fun (_, make, e) -> raises e make);
     ]
@@ -250,7 +250,7 @@ let selection =
   group "Selection"
     [
       cases "matches selects"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         selections
         (fun (_, filter, expected) ->
           equal (list string) expected
@@ -258,7 +258,7 @@ let selection =
                (List.filter (Bench.matches filter)
                   (resolved (selection_suite ())))));
       cases "`Tag matches a case's tags"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         tag_scopes
         (fun (_, tree, expected) ->
           let c = the_case [ tree () ] in
@@ -453,7 +453,7 @@ let resolving =
                  Bench.group "b" [ Bench.bench "x" noop ];
                ]));
       cases "two cases with one id are refused"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         duplicates
         (fun (_, benches, id) ->
           equal
@@ -461,14 +461,14 @@ let resolving =
             (Error (Bench.Duplicate_id id))
             (Result.map (List.map Bench.id) (Bench.resolve (benches ()))));
       cases "check_collected"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         collections
         (fun (_, suite, expected) ->
           let budgets, benches = suite () in
           equal (result unit error) expected
             (Bench.check_collected ~metrics:run_metrics ~budgets benches));
       cases "pp_error gives the remedy"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         error_texts
         (fun (_, e, text) ->
           expect (Format.asprintf "%a" Bench.pp_error e) text);
@@ -583,7 +583,7 @@ let case_observers =
   group "Case observers"
     [
       cases "id and full_name"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         paths
         (fun (_, tree, expected) ->
           let c = the_case [ tree () ] in
@@ -591,7 +591,7 @@ let case_observers =
       test "an explicit id can give two cases one full name"
         an_id_can_share_a_full_name;
       cases "metrics"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         metric_scopes
         (fun (_, tree, expected) ->
           equal
@@ -600,7 +600,7 @@ let case_observers =
             (Option.map (List.map Metric.id)
                (Bench.metrics (the_case [ tree () ]))));
       cases "budgets"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         budget_scopes
         (fun (_, tree, expected) ->
           equal
@@ -729,7 +729,7 @@ let running =
       test "every call of every batch gets the one environment"
         every_call_gets_the_one_environment;
       cases "an exception escapes unchanged"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         raising
         (fun (_, run, expected) ->
           let trace, record = recorder () in

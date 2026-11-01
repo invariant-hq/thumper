@@ -38,12 +38,12 @@ let refusal f =
 (* Each row's call raises [Invalid_argument] whose message starts with the
    facade name of the value called. The words are the owner's. *)
 let refuses rows =
-  cases ~timeout:30.
-    ~name:(fun (name, _, _) -> name)
-    "each refusal names the value as the facade calls it" rows
+  cases ~timeout:30. "each refusal names the value as the facade calls it"
+    ~id:(fun (name, _, _) -> name)
+    rows
     (fun (_, call, affix) ->
       state_env ();
-      starts_with ~affix (refusal call))
+      starts_with ~prefix:affix (refusal call))
 
 let suite =
   [
@@ -218,9 +218,9 @@ let running_benchmarks =
                    suite)),
             "Thumper.run: " );
         ];
-      cases ~timeout:30.
-        ~name:(fun (name, _, _, _) -> name)
-        "run returns the exit code" exit_codes
+      cases ~timeout:30. "run returns the exit code"
+        ~id:(fun (name, _, _, _) -> name)
+        exit_codes
         (fun (_, argv, benches, code) ->
           state_env ();
           let baseline = Filename.concat (temp_dir ()) "facade.thumper" in
@@ -263,8 +263,10 @@ let an_invalid_suite_raises_check_error () =
 let measuring =
   group "Measuring"
     [
-      slow ~timeout:30. "measure on its defaults samples 3 and proves ref exact"
-        measure_on_its_defaults;
+      slow
+      @@ test ~timeout:30.
+           "measure on its defaults samples 3 and proves ref exact"
+           measure_on_its_defaults;
       test "measure raises Check.Error on an invalid suite"
         an_invalid_suite_raises_check_error;
     ]
@@ -323,7 +325,7 @@ let record_adds_this_machine_s_section () =
     rows;
   List.iter
     (fun (name, record) ->
-      starts_with ~msg:name ~affix:"Thumper.Baseline.record: " (refusal record))
+      starts_with ~msg:name ~prefix:"Thumper.Baseline.record: " (refusal record))
     [
       ("an empty name", fun () -> ignore (Thumper.Baseline.record "" run));
       ( "another suite's baseline",
@@ -333,9 +335,11 @@ let record_adds_this_machine_s_section () =
 let baselines =
   group "Baselines"
     [
-      slow ~timeout:30.
-        "record adds this machine's section and refuses as the facade names it"
-        record_adds_this_machine_s_section;
+      slow
+      @@ test ~timeout:30.
+           "record adds this machine's section and refuses as the facade names \
+            it"
+           record_adds_this_machine_s_section;
       test "machine_key is Env's" (fun () ->
           is_true
             (Thumper.Baseline.machine_key == Thumper.Private.Env.machine_key));
@@ -445,9 +449,10 @@ let the_check_example_passes_a_new_section () =
 let examples =
   group "Examples"
     [
-      slow ~timeout:30.
-        "Check.run's example passes a new section and changes no file"
-        the_check_example_passes_a_new_section;
+      slow
+      @@ test ~timeout:30.
+           "Check.run's example passes a new section and changes no file"
+           the_check_example_passes_a_new_section;
     ]
 
 let () =

@@ -200,17 +200,17 @@ let ocaml_identity_is_version_word_size_and_profile () =
 let identifying_the_machine =
   group "Identifying the machine"
     [
-      cases
-        ~name:(fun (s, _) -> Printf.sprintf "%S" s)
-        "hash is FNV-1a 64" fnv1a_vectors
+      cases "hash is FNV-1a 64"
+        ~id:(fun (s, _) -> Printf.sprintf "%S" s)
+        fnv1a_vectors
         (fun (s, h) -> equal string h (Env.hash s));
       test ~timeout:10. "the key hashes the host, the os and the CPU model"
         the_key_hashes_the_host_os_and_cpu_model;
       test "THUMPER_MACHINE is the key as given, on every call"
         the_override_is_the_key_as_given;
-      cases
-        ~name:(fun (key, _) -> Printf.sprintf "%S" key)
-        "THUMPER_MACHINE refuses" refused_keys
+      cases "THUMPER_MACHINE refuses"
+        ~id:(fun (key, _) -> Printf.sprintf "%S" key)
+        refused_keys
         (fun (key, message) ->
           ignore (state_env ());
           setenv "THUMPER_MACHINE" (Some key);
@@ -384,12 +384,12 @@ let refused_polls =
 let sampling_the_load =
   group "Sampling the load"
     [
-      cases ~name:classified_name "classify" classified
+      cases "classify" ~id:classified_name classified
         (fun (l, cores, expected) ->
           equal load expected (Env.classify ~load:l ~cores));
-      cases
-        ~name:(fun (cores, _) -> string_of_int cores)
-        "classify refuses fewer than one core" refused_cores
+      cases "classify refuses fewer than one core"
+        ~id:(fun (cores, _) -> string_of_int cores)
+        refused_cores
         (fun (cores, message) ->
           expect (refusal (fun () -> Env.classify ~load:None ~cores)) message);
       test "load classifies the load average on the host's cores"
@@ -418,14 +418,14 @@ let sampling_the_load =
         samples_every_poll_until_the_deadline;
       test ~timeout:10. "wait_quiet cuts its last sleep short at the deadline"
         cuts_the_last_sleep_short;
-      cases
-        ~name:(fun (t, _) -> Printf.sprintf "%g" t)
-        "wait_quiet refuses a timeout" refused_timeouts
+      cases "wait_quiet refuses a timeout"
+        ~id:(fun (t, _) -> Printf.sprintf "%g" t)
+        refused_timeouts
         (fun (timeout_s, message) ->
           expect (refusal (fun () -> Env.wait_quiet ~timeout_s ())) message);
-      cases
-        ~name:(fun (p, _) -> Printf.sprintf "%g" p)
-        "wait_quiet refuses a poll interval" refused_polls
+      cases "wait_quiet refuses a poll interval"
+        ~id:(fun (p, _) -> Printf.sprintf "%g" p)
+        refused_polls
         (fun (poll_s, message) ->
           expect
             (refusal (fun () ->
@@ -785,9 +785,9 @@ let holding_the_measurement_lock =
           equal ~msg:"on_wait calls" int 0 !calls);
       test ~timeout:10. "a lock held elsewhere is Timeout after wait_s"
         a_held_lock_is_timeout_after_wait_s;
-      cases ~timeout:5.
-        ~name:(fun (name, _, _) -> name)
-        "a lock file that cannot be used is Unusable" unusable
+      cases ~timeout:5. "a lock file that cannot be used is Unusable"
+        ~id:(fun (name, _, _) -> name)
+        unusable
         (fun (_, plant, message) ->
           let dir = plant (state_env ()) in
           let ran = ref false in
@@ -799,16 +799,16 @@ let holding_the_measurement_lock =
         a_file_replaced_during_the_wait_is_unusable;
       test "a planted dangling link creates nothing"
         a_planted_link_creates_nothing;
-      cases ~name:fst "the lock directory is" directories the_lock_directory;
-      cases
-        ~name:(fun (w, _) -> Printf.sprintf "%g" w)
-        "with_lock refuses a wait" refused_waits
+      cases "the lock directory is" ~id:fst directories the_lock_directory;
+      cases "with_lock refuses a wait"
+        ~id:(fun (w, _) -> Printf.sprintf "%g" w)
+        refused_waits
         (fun (wait_s, message) ->
           let dir = state_env () in
           expect
             (refusal (fun () -> Env.Lock.with_lock ~dir ~wait_s ignore))
             message);
-      cases ~name:fst "pp_error prints" printed_errors (fun (_, (e, message)) ->
+      cases "pp_error prints" ~id:fst printed_errors (fun (_, (e, message)) ->
           expect (Format.asprintf "%a" Env.Lock.pp_error e) message);
     ]
 

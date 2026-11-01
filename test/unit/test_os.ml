@@ -135,7 +135,7 @@ let an_interrupted_long_write_writes_each_byte_once () =
 let write_all =
   group "write_all"
     [
-      cases "write_all writes every byte" ~name:fst
+      cases "write_all writes every byte" ~id:fst
         [ ("of an empty string", ""); ("of a string", "one\ntwo\n") ]
         (fun (_, s) -> equal string s (written s));
       test "a full pipe raises EAGAIN and holds a prefix"
@@ -244,14 +244,14 @@ let write_atomic =
     [
       test "write_atomic replaces the contents and leaves no other file"
         it_replaces_the_contents;
-      cases "a new file has mode 0o644 under the umask" ~name:fst
+      cases "a new file has mode 0o644 under the umask" ~id:fst
         [
           ("umask 0", (0, 0o644));
           ("umask 0o022", (0o022, 0o644));
           ("umask 0o077", (0o077, 0o600));
         ]
         (fun (_, (umask, mode)) -> equal int mode (a_new_file_mode umask));
-      cases "an existing file keeps its permission bits" ~name:fst
+      cases "an existing file keeps its permission bits" ~id:fst
         [ ("0o600", 0o600); ("0o755", 0o755); ("read-only 0o444", 0o444) ]
         (fun (_, mode) -> equal int mode (an_existing_file_mode mode));
       test "a symbolic link is replaced by a regular file"

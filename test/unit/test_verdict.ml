@@ -622,14 +622,14 @@ let relations =
   group "Relations"
     [
       cases "a point shift"
-        ~name:(fun (v, r, _) -> strf "%g at r = %g" v r)
+        ~id:(fun (v, r, _) -> strf "%g at r = %g" v r)
         at_a_point
         (fun (v, r, expected) ->
           equal string expected
             (relation
                (one ~budgets:[ Budget.no_slower_than r ] (wall (ties 5 v)))));
       cases "an interval"
-        ~name:(fun (name, _, _, _) -> name)
+        ~id:(fun (name, _, _, _) -> name)
         edges
         (fun (_, r, samples, expected) ->
           equal string expected
@@ -639,10 +639,10 @@ let relations =
       prop "judgment follows the decision model's port" port_case
         judgment_follows_the_port;
       cases "the instability veto"
-        ~name:(fun (name, _, _, _, _, _) -> name)
+        ~id:(fun (name, _, _, _, _, _) -> name)
         vetoes vetoed;
       cases "exact counts"
-        ~name:(fun (name, _, _, _, _) -> name)
+        ~id:(fun (name, _, _, _, _) -> name)
         exact_counts
         (fun (_, budget, row, count, expected) ->
           equal string expected
@@ -652,17 +652,17 @@ let relations =
                   ~rows:[ alloc_row "a" row ]
                   (alloc count))));
       cases "an exact count at a moved batch size"
-        ~name:(fun (name, _, _, _, _) -> name)
+        ~id:(fun (name, _, _, _, _) -> name)
         probed_counts probed_count;
       cases "a sampled row at a moved batch size"
-        ~name:(fun (name, _, _, _) -> name)
+        ~id:(fun (name, _, _, _) -> name)
         moved_batch_sizes
         (fun (_, k, samples, expected) ->
           equal string expected
             (relation
                (one ~rows:[ wall_row ~k "a" (ties 5 1.) ] (wall ~k:8 samples))));
       cases "exactness"
-        ~name:(fun (name, _, _, _, _) -> name)
+        ~id:(fun (name, _, _, _, _) -> name)
         exactness
         (fun (_, budget, row, measurement, expected) ->
           equal string expected
@@ -756,7 +756,7 @@ let reports =
   group "Reports"
     [
       cases "a case's budgets"
-        ~name:(fun (name, _, _, _, _) -> name)
+        ~id:(fun (name, _, _, _, _) -> name)
         resolutions budgets_resolve;
       test "a confirmation's warnings follow the first trial's, each once"
         a_confirmation_s_warnings_follow_the_first_trial_s;
@@ -823,7 +823,7 @@ let comparison_states =
   group "Comparison states"
     [
       cases "comparison and compared_section"
-        ~name:(fun (name, _, _, _) -> name)
+        ~id:(fun (name, _, _, _) -> name)
         files a_file_is_compared_or_not;
       test "on a stale section every metric is proposed"
         (every_metric_is_proposed_on (fun () ->
@@ -1165,7 +1165,7 @@ let judging =
   group "Judging"
     [
       cases "the drift veto"
-        ~name:(fun (name, _, _, _) -> name)
+        ~id:(fun (name, _, _, _) -> name)
         drifted_trials
         (fun (_, r, v, expected) ->
           equal string expected
@@ -1175,7 +1175,7 @@ let judging =
                   ~confirm:(Some (wall (ties 5 v)))
                   (wall ~drifted:true (ties 5 v)))));
       cases "the order of the tests"
-        ~name:(fun (name, _, _, _, _) -> name)
+        ~id:(fun (name, _, _, _, _) -> name)
         orders
         (fun (_, load, row, first, expected) ->
           equal string expected
@@ -1194,7 +1194,7 @@ let judging =
       test "confirmations lists a case with two pending metrics once"
         a_case_with_two_pending_metrics_is_listed_once;
       cases "confirmations is empty"
-        ~name:(fun (name, _, _, _) -> name)
+        ~id:(fun (name, _, _, _) -> name)
         nothing_to_confirm
         (fun (_, budget, load, v) ->
           let p =
@@ -1205,7 +1205,7 @@ let judging =
           in
           equal (list string) [] (Verdict.confirmations p));
       cases "decide, on a pending regression"
-        ~name:(fun (name, _, _, _, _) -> name)
+        ~id:(fun (name, _, _, _, _) -> name)
         confirmations
         (fun (_, r, first, confirm, expected) ->
           equal string expected
@@ -1220,7 +1220,7 @@ let judging =
       test "a confirmed relation carries both shifts"
         a_confirmed_relation_carries_both_shifts;
       cases "decide, on a pending improvement"
-        ~name:(fun (name, _, _, _, _) -> name)
+        ~id:(fun (name, _, _, _, _) -> name)
         improvements
         (fun (_, r, confirm, decide_load, expected) ->
           equal string expected
@@ -1232,7 +1232,7 @@ let judging =
       test "an unconfirmed improvement keeps its first shift"
         an_unconfirmed_improvement_keeps_its_first_shift;
       cases "an inconclusive relation's shift"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         kept_shifts
         (fun (_, t, expected) ->
           equal
@@ -1549,11 +1549,11 @@ let strings_are_escaped () =
 let to_json =
   group "to_json"
     [
-      cases "a document" ~name:fst documents (fun (name, t) ->
+      cases "a document" ~id:fst documents (fun (name, t) ->
           expect_file
-            (Verdict.to_json (t ()))
-            ("test/unit/json/" ^ name ^ ".json"));
-      cases "a reason's spelling" ~name:fst spellings (fun (spelling, t) ->
+            ~file:("test/unit/json/" ^ name ^ ".json")
+            (Verdict.to_json (t ())));
+      cases "a reason's spelling" ~id:fst spellings (fun (spelling, t) ->
           contains
             ~sub:(strf {|"reason":"%s"|} spelling)
             (Verdict.to_json (t ())));
@@ -1565,9 +1565,7 @@ let to_json =
 let observers =
   group "Observers"
     [
-      cases "overall"
-        ~name:(fun (name, _, _, _) -> name)
-        run_outcomes run_outcome;
+      cases "overall" ~id:(fun (name, _, _, _) -> name) run_outcomes run_outcome;
       test "a run whose metrics are all proposed passes" (fun () ->
           let t =
             decided
@@ -1576,13 +1574,13 @@ let observers =
           in
           equal string (outcome_name `Pass) (outcome_name (Verdict.overall t)));
       cases "report_fails"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         failing first_report_fails;
       cases "case_overall"
-        ~name:(fun (name, _, _, _, _) -> name)
+        ~id:(fun (name, _, _, _, _) -> name)
         case_outcomes case_outcome;
       cases "exit_code, then under strict"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         exit_codes
         (fun (_, t, expected) ->
           let t = t () in

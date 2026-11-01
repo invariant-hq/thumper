@@ -368,7 +368,7 @@ let selecting =
   group "Selecting"
     [
       cases "select"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         selections
         (fun (_, filter, expected) ->
           equal
@@ -376,7 +376,7 @@ let selecting =
             expected
             (ids_and_scope (select ?filter two)));
       cases "select refuses"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         refusals
         (fun (_, selection, e) -> raises e selection);
     ]
@@ -669,21 +669,22 @@ let checking =
       test "a recalibrated confirmation is unconfirmed"
         a_recalibrated_confirmation_is_unconfirmed;
       cases "an exact count under a recalibrated timing"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         exact_rows
         (fun (_, row_k, expected) ->
           equal string expected (exact_count_under_a_recalibration ~row_k));
       test "a filter judges the selected cases alone"
         a_filter_judges_the_selected_cases_alone;
       cases "refused before measuring"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         refused_before_measuring
         (fun (_, run, e) ->
           let w = world () in
           raises e (fun () -> run w);
           equal ~msg:"calls" int 0 w.calls);
-      slow ~timeout:30. "run on its default seams proposes a new case"
-        run_on_its_default_seams;
+      slow
+      @@ test ~timeout:30. "run on its default seams proposes a new case"
+           run_on_its_default_seams;
     ]
 
 (* Measuring *)
@@ -729,7 +730,7 @@ let measuring =
       test "measure returns the selected cases' trials in order"
         measure_returns_the_selected_evidence;
       cases "measure refuses before measuring"
-        ~name:(fun (name, _, _, _) -> name)
+        ~id:(fun (name, _, _, _) -> name)
         measure_refusals
         (fun (_, filter, budgets, e) ->
           state_env ();
@@ -739,8 +740,9 @@ let measuring =
                 ~filter
                 [ Bench.bench ~budgets "a" (stepper w (fun _ -> ms_ns)) ]);
           equal ~msg:"calls" int 0 w.calls);
-      slow ~timeout:30. "measure on its default seams samples every case"
-        measure_on_its_default_seams;
+      slow
+      @@ test ~timeout:30. "measure on its default seams samples every case"
+           measure_on_its_default_seams;
     ]
 
 let () = exit (run "check" [ errors; progress; selecting; checking; measuring ])

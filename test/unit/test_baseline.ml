@@ -226,7 +226,7 @@ let baseline_t =
 let types =
   group "Types, errors and quoting"
     [
-      cases "pp_error prints" ~name:fst
+      cases "pp_error prints" ~id:fst
         [
           ( "a corrupt file's line and reason",
             ( Baseline.Corrupt { line = 3; reason = "boom" },
@@ -239,7 +239,7 @@ let types =
           equal string "Thumper.Baseline.Error: corrupt baseline (line 3): boom"
             (Printexc.to_string
                (Baseline.Error (Baseline.Corrupt { line = 3; reason = "boom" }))));
-      cases "quote" ~name:fst
+      cases "quote" ~id:fst
         [
           ("an empty string", ("", "''"));
           ("a plain string", ("a b/c", "'a b/c'"));
@@ -263,7 +263,7 @@ let identifiers =
             (String.of_seq
                (Seq.filter Baseline.is_id_char
                   (String.to_seq (String.init 256 Char.chr)))));
-      cases "valid_segment" ~name:fst
+      cases "valid_segment" ~id:fst
         [
           ("a run of id characters", ("a.B-9_", true));
           ("the empty string", ("", false));
@@ -271,10 +271,10 @@ let identifiers =
           ("a space", ("a b", false));
         ]
         (fun (_, (s, valid)) -> equal bool valid (Baseline.valid_segment s));
-      cases "check_suite accepts" ~name:fst
+      cases "check_suite accepts" ~id:fst
         [ ("a name", "digest"); ("a tab and a carriage return", "a\tb\r") ]
         (fun (_, name) -> Baseline.check_suite ~fname:"f" name);
-      cases "check_suite refuses, naming fname" ~name:fst
+      cases "check_suite refuses, naming fname" ~id:fst
         [ ("an empty name", ""); ("a newline", "two\nlines") ]
         (fun (_, name) ->
           raises
@@ -697,7 +697,7 @@ let a_median_one_digit_off_is_refused (id, k) =
       (Baseline.of_string (with_rows [ line ]))
   in
   equal int 8 line_no;
-  starts_with ~affix:"stored median '" reason
+  starts_with ~prefix:"stored median '" reason
 
 (* What [read] makes of the file at [path]. *)
 let read_outcome path =
@@ -754,7 +754,7 @@ let reading =
         the_sample_parses;
       test "the empty string has no suite and no section"
         the_empty_string_has_no_suite_and_no_section;
-      cases "an accepted text prints back as itself" ~name:fst accepted
+      cases "an accepted text prints back as itself" ~id:fst accepted
         (fun (_, text) -> equal string text (reprinted text));
       prop "of_string reads back what to_string printed"
         ~examples:[ parsed sample ]
@@ -763,7 +763,7 @@ let reading =
       prop "a printed file parses to the rows it was built from" baseline_t
         (fun t -> equal structure t (parsed (printed t)));
       cases "of_string refuses"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         refusals
         (fun (_, text, pos) -> expect (refused text) pos);
       prop "a stored median one digit off is refused"
@@ -771,7 +771,7 @@ let reading =
            (fun ppf (id, k) -> Format.fprintf ppf "(%s, %d)" id k)
            Gen.(pair gen_id (int_range 1 10_000)))
         a_median_one_digit_off_is_refused;
-      cases "read" ~name:fst
+      cases "read" ~id:fst
         [
           ( "a file is its parsed text",
             fun () -> ("file " ^ sample, read_outcome (written sample)) );
@@ -838,7 +838,7 @@ let writing =
           Baseline.write path t;
           equal string sample
             (In_channel.with_open_bin path In_channel.input_all));
-      cases "a failed write is Io, naming the path" ~name:fst
+      cases "a failed write is Io, naming the path" ~id:fst
         [
           ( "a missing directory",
             fun dir ->
@@ -863,7 +863,7 @@ let files =
           let t = Baseline.empty ~suite:"digest" in
           equal string "# thumper baseline v1\n# suite: digest\n" (printed t);
           equal (option string) (Some "digest") (Baseline.suite t));
-      cases "empty refuses what check_suite refuses" ~name:fst
+      cases "empty refuses what check_suite refuses" ~id:fst
         [ ("an empty name", ""); ("a newline", "two\nlines") ]
         (fun (_, suite) ->
           raises
@@ -919,7 +919,7 @@ let section_observers =
             (found "alloc_words");
           equal (option evidence) None (found "cpu_time"));
       cases "case_frozen_k"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         frozen_ks
         (fun (_, rows, k) ->
           equal (option int) k
@@ -1242,11 +1242,11 @@ let recording =
   group "Recording"
     [
       cases "record refuses"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         refusals
         (fun (_, record, message) -> raises (Invalid_argument message) record);
       cases "record prints a sample as its text"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         sampled_lines
         (fun (_, samples, line) ->
           let text =
@@ -1321,7 +1321,7 @@ let recording =
                  ]))
             (printed t));
       cases "record replaces the section"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         replaced a_section_is_replaced_by_the_run;
       test "record under a partial selection replaces the selected rows alone"
         a_partial_selection_replaces_the_selected_rows;

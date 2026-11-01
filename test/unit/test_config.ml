@@ -66,7 +66,7 @@ let default =
 
 let presets =
   cases "Presets"
-    ~name:(fun (name, _, _) -> name)
+    ~id:(fun (name, _, _) -> name)
     [
       ( "default is 20 samples, a 5 ms floor, 100 ms and 3 batches of warmup, \
          a 10 s deadline, wall_time and alloc_words, forked",
@@ -203,7 +203,7 @@ let setters =
   group "Setters"
     [
       cases "a setter accepts"
-        ~name:(fun (name, _) -> name)
+        ~id:(fun (name, _) -> name)
         accepted
         (fun (_, f) -> ignore (f () : Config.t));
       test "a chain of setters gives one config in any order" (fun () ->
@@ -220,7 +220,7 @@ let setters =
           in
           equal int 3 t.Config.warmup_batches);
       cases "a setter refuses a value that breaks its field's invariant"
-        ~name:(fun (name, _, _) -> name)
+        ~id:(fun (name, _, _) -> name)
         refusals
         (fun (_, f, pos) -> expect (require_some (refusal f)) pos);
     ]
