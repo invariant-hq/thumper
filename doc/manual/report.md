@@ -18,20 +18,20 @@ out, and under `GITHUB_ACTIONS` the [annotations](#github-annotations) sit
 above the hints. After an edit that makes `fib/20` slower and `fib/10`
 faster, `check` prints every block:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_digest.exe
-digest: 3 cases vs bench/digest.thumper for machine 5c1e0a7f3b9d2486
+digest: 3 cases vs bench/digest.thumper for machine 943935ae6b4f79ac
 
-  passed     199.20 ns  ±0.5%  4 w  md5/string-64
-  improved     1.40 ns  ±0.4%  0 w  fib/10
-      -78.6% [-78.7, -78.5]
-  REGRESSED   21.63 ns  ±0.3%  0 w  fib/20
-      +99.8% [+99.5, +100.1]  budget +5%
+  passed     197.45 ns  ±1.2%  4 w  md5/string-64
+      +3.3% [+1.6, +4.4]  budget +5%
+  improved     4.07 ns  ±0.6%  0 w  fib/10
+      -37.1% [-38.4, -36.3]
+  REGRESSED   19.52 ns  ±0.6%  0 w  fib/20
+      +82.8% [+81.6, +84.5]  budget +5%
 
 rerun: ./_build/default/bench/bench_digest.exe -f fib/20
 accept: ./_build/default/bench/bench_digest.exe bless -f fib/10
-2 passed (1 improved), 1 regressed in 1.6s.
+2 passed (1 improved), 1 regressed in 1.4s.
 ```
 
 ## The header
@@ -51,29 +51,27 @@ plural. The first run of the [tutorial](getting-started.md#the-first-run)
 shows the `no baseline` header. A stale section prints every row
 `proposed`:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_digest.exe
-digest: stale baseline for machine 5c1e0a7f3b9d2486 (ocaml 5.2.0 · 64-bit · release → 5.5.1 · 64-bit · release)
+digest: stale baseline for machine 943935ae6b4f79ac (ocaml 5.2.0 · 64-bit · release → 5.5.1 · 64-bit · release)
 
-  proposed  199.20 ns  ±0.6%  4 w  md5/string-64
-  proposed    6.55 ns  ±0.3%  0 w  fib/10
-  proposed   10.83 ns  ±0.2%  0 w  fib/20
+  proposed  193.75 ns  ±1.2%  4 w  md5/string-64
+  proposed    6.59 ns  ±1.3%  0 w  fib/10
+  proposed   11.07 ns  ±0.8%  0 w  fib/20
 
 accept: ./_build/default/bench/bench_digest.exe bless
-3 proposed in 0.9s.
+3 proposed in 790ms.
 ```
 
 `bless` prints every row `blessed`. `bless -f fib/20` records one case:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_digest.exe -- bless -f fib/20
-digest: 1 case for machine 5c1e0a7f3b9d2486
+digest: 1 case for machine 943935ae6b4f79ac
 
-  blessed  10.83 ns  ±0.2%  0 w  fib/20
+  blessed  10.97 ns  ±0.5%  0 w  fib/20
 
-1 blessed into bench/digest.thumper in 0.3s.
+1 blessed into bench/digest.thumper in 251ms.
 ```
 
 On a loaded host, a `warning:` line follows the header of a compared run
@@ -85,37 +83,35 @@ Each sampled comparison then reads `inconclusive`, with `environment` and
 the change the run measured on the detail line, and exact counts are still
 judged:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_digest.exe
-digest: 3 cases vs bench/digest.thumper for machine 5c1e0a7f3b9d2486
-warning: load 8.3 on 10 cores, over 5.0; timing verdicts degraded
+digest: 3 cases vs bench/digest.thumper for machine 943935ae6b4f79ac
+warning: load 29.0 on 10 cores, over 5.0; timing verdicts degraded
 
-  inconclusive  205.63 ns  ±0.5%  4 w  md5/string-64
-      environment  -0.4% [-2.6, +1.1]
-  inconclusive    6.78 ns  ±0.5%  0 w  fib/10
-      environment  -0.5% [-1.7, +0.8]
-  inconclusive   11.34 ns  ±0.4%  0 w  fib/20
-      environment  -0.5% [-4.9, +1.6]
+  inconclusive  201.37 ns  ±1.0%  4 w  md5/string-64
+      environment  +6.0% [+4.2, +6.5]
+  inconclusive    6.76 ns  ±0.1%  0 w  fib/10
+      environment  +5.6% [+2.8, +6.3]
+  inconclusive   11.27 ns  ±0.0%  0 w  fib/20
+      environment  +5.9% [+5.7, +6.2]
 
 rerun: ./_build/default/bench/bench_digest.exe
-3 inconclusive in 1.0s.
+3 inconclusive in 814ms.
 ```
 
 Under the header of `bless --force` on a loaded host it reads
 `warning: load <load> on <n> cores, over <limit>; recorded under --force`:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_digest.exe -- bless --force
-digest: 3 cases for machine 5c1e0a7f3b9d2486
-warning: load 8.1 on 10 cores, over 5.0; recorded under --force
+digest: 3 cases for machine 943935ae6b4f79ac
+warning: load 33.4 on 10 cores, over 5.0; recorded under --force
 
-  blessed  293.25 ns  ±175.7%  4 w  md5/string-64
-  blessed    6.83 ns    ±2.5%  0 w  fib/10
-  blessed   11.38 ns  ±150.1%  0 w  fib/20
+  blessed  205.22 ns  ±0.5%  4 w  md5/string-64
+  blessed    6.76 ns  ±0.0%  0 w  fib/10
+  blessed   11.27 ns  ±0.1%  0 w  fib/20
 
-3 blessed into bench/digest.thumper in 1.1s.
+3 blessed into bench/digest.thumper in 750ms.
 ```
 
 ## The table
@@ -280,21 +276,21 @@ metric that fails its case, above the hints, naming the metric by its id:
 After the edit of the tutorial's [regression](getting-started.md#a-regression)
 and a second one that makes `md5/string-64` copy its input:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ GITHUB_ACTIONS=true dune exec bench/bench_digest.exe
-digest: 3 cases vs bench/digest.thumper for machine 5c1e0a7f3b9d2486
+digest: 3 cases vs bench/digest.thumper for machine 943935ae6b4f79ac
 
-  REGRESSED  205.40 ns  ±0.6%  14 w  md5/string-64
-      alloc 4 w → 14 w (exact)  budget +0%; passed +3.1%  budget +5%
-  REGRESSED   13.07 ns  ±0.3%   0 w  fib/10
-      +99.5% [+99.1, +99.9]  budget +5%
-  REGRESSED   21.63 ns  ±0.2%   0 w  fib/20
-      +99.7% [+99.5, +99.9]  budget +5%
+  REGRESSED  207.53 ns  ±1.4%  14 w  md5/string-64
+      +8.0% [+6.8, +9.2]  budget +5%; REGRESSED alloc 4 w → 14 w (exact)  budget +0%
+  REGRESSED   10.88 ns  ±0.2%   0 w  fib/10
+      +66.8% [+65.1, +70.6]  budget +5%
+  REGRESSED   19.56 ns  ±0.4%   0 w  fib/20
+      +83.5% [+81.5, +84.4]  budget +5%
 
+::error::md5/string-64 regressed: wall_time +8.0% [+6.8, +9.2], budget +5%
 ::error::md5/string-64 regressed: alloc_words 4 → 14 w (exact), budget +0%
-::error::fib/10 regressed: wall_time +99.5% [+99.1, +99.9], budget +5%
-::error::fib/20 regressed: wall_time +99.7% [+99.5, +99.9], budget +5%
+::error::fib/10 regressed: wall_time +66.8% [+65.1, +70.6], budget +5%
+::error::fib/20 regressed: wall_time +83.5% [+81.5, +84.4], budget +5%
 
 rerun: ./_build/default/bench/bench_digest.exe -f md5/string-64 -f fib/10 -f fib/20
 3 regressed in 2.0s.
@@ -320,30 +316,29 @@ Stderr carries every line that is not the report:
 
 A run that waits for the lock:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_digest.exe -- -f fib/10 --quick
 thumper: waiting for the measurement lock (another run is measuring) ...
-digest: 1 case vs bench/digest.thumper for machine 5c1e0a7f3b9d2486
+digest: 1 case vs bench/digest.thumper for machine 943935ae6b4f79ac
 
-  passed  6.55 ns  ±0.4%  0 w  fib/10
+  passed  6.60 ns  ±1.4%  0 w  fib/10
+      +1.6% [-0.4, +3.6]  budget +5%
 
-1 passed in 0.3s.
+1 passed in 208ms.
 ```
 
 A run that waits for a quiet host, on a host that stays loaded:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_digest.exe -- -f fib/10 --quick --wait-quiet 10
-thumper: waiting up to 10s for a quiet host (load 8.4 on 10 cores, over 5.0)
+thumper: waiting up to 10s for a quiet host (load 29.0 on 10 cores, over 5.0)
 thumper: warning: host still loaded after 10s; measuring anyway
-digest: 1 case vs bench/digest.thumper for machine 5c1e0a7f3b9d2486
-warning: load 8.3 on 10 cores, over 5.0; timing verdicts degraded
+digest: 1 case vs bench/digest.thumper for machine 943935ae6b4f79ac
+warning: load 33.4 on 10 cores, over 5.0; timing verdicts degraded
 
-  inconclusive  6.79 ns  ±3.5%  0 w  fib/10
-      environment  +1.7% [-1.1, +6.9]
+  inconclusive  6.79 ns  ±7.3%  0 w  fib/10
+      environment  +6.1% [+2.9, +15.6]
 
 rerun: ./_build/default/bench/bench_digest.exe --quick -f fib/10
-1 inconclusive in 0.3s.
+1 inconclusive in 231ms.
 ```

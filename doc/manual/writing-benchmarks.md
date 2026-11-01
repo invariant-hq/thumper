@@ -48,33 +48,34 @@ for them are in [the report](report.md#the-table).
 The first run of the example proposes a baseline, the pasted `accept:`
 line records it, and the second run judges every row against it:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_budgets.exe
-budgets: no baseline for machine 5c1e0a7f3b9d2486 (Apple M1 Max)
+budgets: no baseline for machine 943935ae6b4f79ac (Apple M1 Max)
 
-  proposed  160.91 ns  ±0.5%  18 w  codec/hex-encode
-  proposed  327.83 ns  ±0.2%  10 w  codec/hex-decode
-  proposed   30.43 ns  ±0.6%  64 w  scratch-table
+  proposed  155.20 ns  ±1.2%  18 w  codec/hex-encode
+  proposed  320.96 ns  ±0.9%  10 w  codec/hex-decode
+  proposed   29.57 ns  ±0.5%  64 w  scratch-table
 
 accept: ./_build/default/bench/bench_budgets.exe bless
-3 proposed in 0.9s.
+3 proposed in 771ms.
 $ ./_build/default/bench/bench_budgets.exe bless
-budgets: 3 cases for machine 5c1e0a7f3b9d2486
+budgets: 3 cases for machine 943935ae6b4f79ac
 
-  blessed  160.47 ns  ±0.4%  18 w  codec/hex-encode
-  blessed  328.02 ns  ±0.3%  10 w  codec/hex-decode
-  blessed   30.41 ns  ±0.5%  64 w  scratch-table
+  blessed  154.46 ns  ±0.4%  18 w  codec/hex-encode
+  blessed  310.09 ns  ±0.5%  10 w  codec/hex-decode
+  blessed   29.69 ns  ±0.8%  64 w  scratch-table
 
-3 blessed into bench/budgets.thumper in 0.9s.
+3 blessed into bench/budgets.thumper in 888ms.
 $ dune exec bench/bench_budgets.exe
-budgets: 3 cases vs bench/budgets.thumper for machine 5c1e0a7f3b9d2486
+budgets: 3 cases vs bench/budgets.thumper for machine 943935ae6b4f79ac
 
-  passed  160.53 ns  ±0.8%  18 w  codec/hex-encode
-  passed  329.61 ns  ±1.1%  10 w  codec/hex-decode
-  passed   30.38 ns  ±0.6%  64 w  scratch-table
+  passed  155.63 ns  ±0.7%  18 w  codec/hex-encode
+  passed  317.70 ns  ±0.7%  10 w  codec/hex-decode
+      +2.3% [+1.2, +3.3]  budget +10%
+  passed   29.24 ns  ±1.2%  64 w  scratch-table
+      -1.2% [-2.8, +0.6]  budget +5%
 
-3 passed in 0.9s.
+3 passed in 873ms.
 ```
 
 ## Capping allocation
@@ -105,18 +106,17 @@ To see the cap fail, the example's array grows to 300 elements:
 
 The case's row reads `REGRESSED` and the run exits 1:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_budgets.exe
-budgets: 3 cases vs bench/budgets.thumper for machine 5c1e0a7f3b9d2486
+budgets: 3 cases vs bench/budgets.thumper for machine 943935ae6b4f79ac
 
-  passed     161.22 ns  ±0.5%   18 w  codec/hex-encode
-  passed     328.32 ns  ±0.4%   10 w  codec/hex-decode
-  REGRESSED  250.78 ns  ±0.8%  301 w  scratch-table
-      alloc 64 w → 301 w (exact)  cap 256 w
+  passed     156.25 ns  ±0.9%   18 w  codec/hex-encode
+  passed     312.78 ns  ±0.6%   10 w  codec/hex-decode
+  REGRESSED  242.74 ns  ±0.7%  301 w  scratch-table
+      +718.9% [+707.5, +733.4]  budget +5%; REGRESSED alloc 64 w → 301 w (exact)  cap 256 w
 
 rerun: ./_build/default/bench/bench_budgets.exe -f scratch-table
-2 passed, 1 regressed in 0.9s.
+2 passed, 1 regressed in 1.4s.
 $ echo $?
 1
 ```
@@ -256,17 +256,16 @@ let () =
 alone. Each metric a case collects has a budget, so `minor_collections`
 has the default one, 5%:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_protocol.exe
-protocol: no baseline for machine 5c1e0a7f3b9d2486 (Apple M1 Max)
+protocol: no baseline for machine 943935ae6b4f79ac (Apple M1 Max)
 
-  proposed   18.72 ms  ±0.5%  475,405 w  sort-100k
-  proposed  227.71 us  ±4.3%             sum-100k
-  warning: sort-100k: minor_collections: exactness probe failed: batch deltas 1 (k=1) and 4 (2k=2) give per-call 3 words with harness h -2 vs -2; treating as sampled
+  proposed   17.64 ms  ±1.6%  475,401 w  sort-100k
+  proposed  215.01 us  ±0.3%             sum-100k
+  warning: sort-100k: minor_collections: exactness probe failed: batch deltas 1 (k=1) and 4 (2k=2) give 3 per call and a per-batch overhead of -2; treating as sampled
 
 accept: ./_build/default/bench/bench_protocol.exe bless
-2 proposed in 2.4s.
+2 proposed in 1.1s.
 ```
 
 The built-in metrics, and how a scope's `?metrics` reaches its cases,

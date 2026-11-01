@@ -186,7 +186,7 @@ case with its warnings, the hints and, last, a summary. On this run, one
 case allocates more than its budget allows, on a loaded host:
 
 ```
-digest: 3 cases vs bench/digest.thumper for machine 5c1e0a7f3b9d2486
+digest: 3 cases vs bench/digest.thumper for machine 943935ae6b4f79ac
 warning: load 79.8 on 10 cores, over 5.0; timing verdicts degraded
 
   REGRESSED     216.67 ns  ±74.7%  14 w  md5/string-64

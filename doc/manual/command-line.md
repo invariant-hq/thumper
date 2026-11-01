@@ -12,7 +12,6 @@ transcripts on this page run examples from `examples/` as a project's
 `bench/` directory, where `dune exec` passes the arguments after its own
 `--` to the executable:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_hello.exe -- -h
 bench_hello.exe - thumper benchmark suite (thumper dev)
@@ -136,7 +135,6 @@ Every subcommand selects the same way. A selection that matches no case
 stops the run with exit 2, and names what matched none of the suite's
 cases:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_tags.exe -- list nope
 thumper: no case selected: 'nope' matched none of 4 cases
@@ -169,7 +167,6 @@ before measuring or touching a file. An unknown long option names the
 nearest long option or subcommand within two edits, or a third of its
 length when that is more, and `-l` and `-u` name `list` and `bless`:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_hello.exe -- bless --json v.json
 thumper: option '--json' applies to check, not bless

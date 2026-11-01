@@ -17,16 +17,16 @@ $ cat bench/digest.thumper
 # thumper baseline v1
 # suite: digest
 
-# machine: 5c1e0a7f3b9d2486
+# machine: 943935ae6b4f79ac
 # host: laptop · Apple M1 Max · arm64 · macos
 # ocaml: 5.5.1 · 64-bit · release
 
 fib/10	alloc_words	exact	0
-fib/10	wall_time	batch=1048576	n=20	6.542e-09	6.480e-09 6.485e-09 6.492e-09 6.497e-09 6.497e-09 6.498e-09 6.503e-09 6.507e-09 6.522e-09 6.531e-09 6.553e-09 6.563e-09 6.565e-09 6.566e-09 6.571e-09 6.576e-09 6.576e-09 6.579e-09 6.588e-09 6.590e-09
+fib/10	wall_time	batch=1048576	n=20	6.531e-09	6.354e-09 6.356e-09 6.360e-09 6.361e-09 6.363e-09 6.369e-09 6.376e-09 6.397e-09 6.448e-09 6.508e-09 6.553e-09 6.557e-09 6.568e-09 6.572e-09 6.572e-09 6.591e-09 6.614e-09 6.827e-09 6.868e-09 6.871e-09
 fib/20	alloc_words	exact	0
-fib/20	wall_time	batch=524288	n=20	1.082e-08	1.081e-08 1.081e-08 1.081e-08 1.081e-08 1.081e-08 1.082e-08 1.082e-08 1.082e-08 1.082e-08 1.082e-08 1.082e-08 1.083e-08 1.083e-08 1.083e-08 1.084e-08 1.085e-08 1.086e-08 1.086e-08 1.095e-08 1.119e-08
+fib/20	wall_time	batch=524288	n=20	1.064e-08	1.060e-08 1.060e-08 1.060e-08 1.061e-08 1.061e-08 1.061e-08 1.062e-08 1.063e-08 1.063e-08 1.064e-08 1.064e-08 1.065e-08 1.066e-08 1.066e-08 1.066e-08 1.085e-08 1.094e-08 1.095e-08 1.097e-08 1.105e-08
 md5/string-64	alloc_words	exact	4
-md5/string-64	wall_time	batch=32768	n=20	1.989e-07	1.930e-07 1.964e-07 1.967e-07 1.968e-07 1.970e-07 1.970e-07 1.977e-07 1.986e-07 1.986e-07 1.987e-07 1.990e-07 1.993e-07 1.996e-07 1.996e-07 2.002e-07 2.009e-07 2.014e-07 2.014e-07 2.017e-07 2.041e-07
+md5/string-64	wall_time	batch=32768	n=20	1.929e-07	1.890e-07 1.890e-07 1.892e-07 1.894e-07 1.894e-07 1.895e-07 1.895e-07 1.896e-07 1.905e-07 1.929e-07 1.930e-07 1.930e-07 1.930e-07 1.931e-07 1.931e-07 1.934e-07 1.935e-07 1.936e-07 1.936e-07 1.949e-07
 ```
 
 ## Grammar
@@ -130,17 +130,16 @@ Other header lines are annotations. Thumper writes one kind, the
 core count. Here a forced `bless` records this machine's section of a
 baseline that also holds a section for the key `ci-macos`:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_digest.exe -- bless --force
-digest: 3 cases for machine 5c1e0a7f3b9d2486
-warning: load 32.2 on 10 cores, over 5.0; recorded under --force
+digest: 3 cases for machine 943935ae6b4f79ac
+warning: load 33.7 on 10 cores, over 5.0; recorded under --force
 
-  blessed  204.70 ns  ±1.9%  4 w  md5/string-64
-  blessed    6.57 ns  ±1.9%  0 w  fib/10
-  blessed   10.84 ns  ±1.9%  0 w  fib/20
+  blessed  201.96 ns  ±1.2%  4 w  md5/string-64
+  blessed    6.76 ns  ±0.1%  0 w  fib/10
+  blessed   11.27 ns  ±0.0%  0 w  fib/20
 
-3 blessed into bench/digest.thumper in 0.9s.
+3 blessed into bench/digest.thumper in 827ms.
 ```
 
 ```
@@ -148,28 +147,28 @@ $ cat bench/digest.thumper
 # thumper baseline v1
 # suite: digest
 
-# machine: 5c1e0a7f3b9d2486
+# machine: 943935ae6b4f79ac
 # host: laptop · Apple M1 Max · arm64 · macos
 # ocaml: 5.5.1 · 64-bit · release
-# forced: blessed under load 32.2 on 10 cores
+# forced: blessed under load 33.7 on 10 cores
 
 fib/10	alloc_words	exact	0
-fib/10	wall_time	batch=1048576	n=20	6.569e-09	6.478e-09 6.480e-09 6.481e-09 6.482e-09 6.484e-09 6.493e-09 6.496e-09 6.497e-09 6.505e-09 6.507e-09 6.632e-09 6.727e-09 6.733e-09 6.734e-09 6.740e-09 6.744e-09 6.745e-09 6.745e-09 6.748e-09 6.773e-09
+fib/10	wall_time	batch=1048576	n=20	6.755e-09	6.752e-09 6.752e-09 6.754e-09 6.754e-09 6.755e-09 6.755e-09 6.755e-09 6.755e-09 6.755e-09 6.755e-09 6.755e-09 6.755e-09 6.761e-09 6.763e-09 6.771e-09 6.777e-09 6.779e-09 7.356e-09 8.238e-09 1.196e-08
 fib/20	alloc_words	exact	0
-fib/20	wall_time	batch=524288	n=20	1.084e-08	1.080e-08 1.081e-08 1.081e-08 1.082e-08 1.082e-08 1.082e-08 1.082e-08 1.083e-08 1.083e-08 1.084e-08 1.084e-08 1.085e-08 1.088e-08 1.098e-08 1.123e-08 1.123e-08 1.123e-08 1.126e-08 1.127e-08 1.132e-08
+fib/20	wall_time	batch=524288	n=20	1.127e-08	1.127e-08 1.127e-08 1.127e-08 1.127e-08 1.127e-08 1.127e-08 1.127e-08 1.127e-08 1.127e-08 1.127e-08 1.127e-08 1.127e-08 1.127e-08 1.127e-08 1.127e-08 1.128e-08 1.128e-08 1.128e-08 1.129e-08 1.130e-08
 md5/string-64	alloc_words	exact	4
-md5/string-64	wall_time	batch=32768	n=20	2.047e-07	1.967e-07 1.969e-07 1.970e-07 1.970e-07 1.972e-07 1.973e-07 1.979e-07 2.018e-07 2.038e-07 2.047e-07 2.047e-07 2.048e-07 2.048e-07 2.048e-07 2.050e-07 2.050e-07 2.053e-07 2.054e-07 2.058e-07 2.068e-07
+md5/string-64	wall_time	batch=32768	n=20	2.020e-07	2.007e-07 2.008e-07 2.008e-07 2.008e-07 2.008e-07 2.009e-07 2.009e-07 2.009e-07 2.012e-07 2.013e-07 2.026e-07 2.051e-07 2.052e-07 2.053e-07 2.056e-07 2.175e-07 2.237e-07 2.311e-07 2.927e-07 3.937e-07
 
 # machine: ci-macos
 # host: laptop · Apple M1 Max · arm64 · macos
 # ocaml: 5.5.1 · 64-bit · release
 
 fib/10	alloc_words	exact	0
-fib/10	wall_time	batch=1048576	n=20	6.581e-09	6.560e-09 6.560e-09 6.561e-09 6.562e-09 6.563e-09 6.569e-09 6.570e-09 6.571e-09 6.572e-09 6.580e-09 6.581e-09 6.605e-09 6.610e-09 6.620e-09 6.672e-09 6.684e-09 6.718e-09 6.766e-09 6.775e-09 6.831e-09
+fib/10	wall_time	batch=1048576	n=20	6.376e-09	6.356e-09 6.357e-09 6.358e-09 6.360e-09 6.369e-09 6.369e-09 6.371e-09 6.373e-09 6.374e-09 6.375e-09 6.377e-09 6.378e-09 6.379e-09 6.379e-09 6.382e-09 6.385e-09 6.393e-09 6.398e-09 6.418e-09 6.427e-09
 fib/20	alloc_words	exact	0
-fib/20	wall_time	batch=524288	n=20	1.115e-08	1.086e-08 1.091e-08 1.095e-08 1.095e-08 1.097e-08 1.097e-08 1.102e-08 1.103e-08 1.113e-08 1.115e-08 1.116e-08 1.117e-08 1.117e-08 1.117e-08 1.122e-08 1.126e-08 1.126e-08 1.139e-08 1.144e-08 1.146e-08
+fib/20	wall_time	batch=524288	n=20	1.063e-08	1.060e-08 1.061e-08 1.062e-08 1.062e-08 1.062e-08 1.062e-08 1.062e-08 1.062e-08 1.062e-08 1.063e-08 1.063e-08 1.063e-08 1.064e-08 1.065e-08 1.066e-08 1.066e-08 1.066e-08 1.067e-08 1.071e-08 1.073e-08
 md5/string-64	alloc_words	exact	4
-md5/string-64	wall_time	batch=32768	n=20	2.013e-07	1.959e-07 1.962e-07 1.963e-07 1.963e-07 1.990e-07 1.993e-07 1.993e-07 1.993e-07 1.994e-07 2.012e-07 2.014e-07 2.031e-07 2.043e-07 2.051e-07 2.054e-07 2.055e-07 2.056e-07 2.058e-07 2.060e-07 2.061e-07
+md5/string-64	wall_time	batch=32768	n=20	1.939e-07	1.931e-07 1.933e-07 1.934e-07 1.934e-07 1.935e-07 1.936e-07 1.936e-07 1.937e-07 1.937e-07 1.938e-07 1.939e-07 1.939e-07 1.940e-07 1.948e-07 1.949e-07 1.956e-07 1.961e-07 1.963e-07 2.017e-07 2.022e-07
 ```
 
 A `bless` of every case, and a `bless` on a missing or stale section,

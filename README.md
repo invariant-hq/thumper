@@ -37,12 +37,12 @@ names the command that records it (the numbers are one run's):
 
 ```
 $ dune exec bench/bench_hello.exe
-hello: no baseline for machine 5c1e0a7f3b9d2486 (Apple M1 Max)
+hello: no baseline for machine 943935ae6b4f79ac (Apple M1 Max)
 
-  proposed  1.56 us  ±1.4%  3,000 w  list-rev
+  proposed  1.35 us  ±1.3%  3,000 w  list-rev
 
 accept: ./_build/default/bench/bench_hello.exe bless
-1 proposed in 0.4s.
+1 proposed in 243ms.
 ```
 
 Running the `accept:` line writes `bench/hello.thumper`, which the project

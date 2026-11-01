@@ -87,17 +87,16 @@ and words, such as `±`, `w` and `proposed`. With no baseline yet, every
 row reads `proposed`, the build passes, and the `accept:` line names the
 command that records the baseline:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune build @bench
-digest: no baseline for machine 5c1e0a7f3b9d2486 (Apple M1 Max)
+digest: no baseline for machine 943935ae6b4f79ac (Apple M1 Max)
 
-  proposed  199.01 ns  ±0.9%  4 w  md5/string-64
-  proposed    6.54 ns  ±0.5%  0 w  fib/10
-  proposed   10.82 ns  ±0.2%  0 w  fib/20
+  proposed  192.09 ns  ±1.1%  4 w  md5/string-64
+  proposed    6.47 ns  ±0.8%  0 w  fib/10
+  proposed   10.97 ns  ±0.9%  0 w  fib/20
 
 accept: ./_build/default/bench/bench_digest.exe bless
-3 proposed in 0.9s.
+3 proposed in 782ms.
 ```
 
 ## Recording the baseline
@@ -105,30 +104,30 @@ accept: ./_build/default/bench/bench_digest.exe bless
 We paste the `accept:` line. `bless` measures the cases again and records
 them in `bench/digest.thumper`, the baseline we commit:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ ./_build/default/bench/bench_digest.exe bless
-digest: 3 cases for machine 5c1e0a7f3b9d2486
+digest: 3 cases for machine 943935ae6b4f79ac
 
-  blessed  199.40 ns  ±0.6%  4 w  md5/string-64
-  blessed    6.55 ns  ±0.3%  0 w  fib/10
-  blessed   10.83 ns  ±0.2%  0 w  fib/20
+  blessed  192.95 ns  ±0.9%  4 w  md5/string-64
+  blessed    6.53 ns  ±1.6%  0 w  fib/10
+  blessed   10.64 ns  ±0.2%  0 w  fib/20
 
-3 blessed into bench/digest.thumper in 0.9s.
+3 blessed into bench/digest.thumper in 776ms.
 ```
 
 The next run compares every case with the baseline, and all three pass:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune build @bench
-digest: 3 cases vs digest.thumper for machine 5c1e0a7f3b9d2486
+digest: 3 cases vs digest.thumper for machine 943935ae6b4f79ac
 
-  passed  199.12 ns  ±0.7%  4 w  md5/string-64
-  passed    6.56 ns  ±0.4%  0 w  fib/10
-  passed   10.84 ns  ±0.3%  0 w  fib/20
+  passed  196.28 ns  ±1.1%  4 w  md5/string-64
+      +2.5% [+1.3, +3.7]  budget +5%
+  passed    6.49 ns  ±0.9%  0 w  fib/10
+  passed   10.91 ns  ±0.5%  0 w  fib/20
+      +2.0% [+0.7, +2.9]  budget +5%
 
-3 passed in 0.9s.
+3 passed in 771ms.
 ```
 
 ## A regression
@@ -144,7 +143,6 @@ fib (2 * Thumper.black_box n)
 The two `fib` rows now read `REGRESSED`, beside the change and its budget,
 and the build fails:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune build @bench
 File "bench/dune", lines 5-11, characters 0-127:
@@ -155,32 +153,38 @@ File "bench/dune", lines 5-11, characters 0-127:
  9 |   (glob_files *.thumper))
 10 |  (action
 11 |   (run %{exe:bench_digest.exe})))
-digest: 3 cases vs digest.thumper for machine 5c1e0a7f3b9d2486
+digest: 3 cases vs digest.thumper for machine 943935ae6b4f79ac
 
-  passed     199.31 ns  ±0.5%  4 w  md5/string-64
-  REGRESSED   13.07 ns  ±0.3%  0 w  fib/10
-      +99.5% [+99.1, +99.9]  budget +5%
-  REGRESSED   21.63 ns  ±0.2%  0 w  fib/20
-      +99.7% [+99.5, +99.9]  budget +5%
+  passed     193.24 ns  ±0.8%  4 w  md5/string-64
+  REGRESSED   10.90 ns  ±0.5%  0 w  fib/10
+      +68.1% [+65.4, +71.0]  budget +5%
+  REGRESSED   20.09 ns  ±1.4%  0 w  fib/20
+      +85.6% [+83.8, +89.7]  budget +5%
 
 rerun: ./_build/default/bench/bench_digest.exe -f fib/10 -f fib/20
-1 passed, 2 regressed in 1.6s.
+1 passed, 2 regressed in 1.7s.
 ```
 
 ## The fix
 
-We undo the edit, and the next run passes again:
+We undo the edit. The executable and the baseline are again those of the
+last run that passed, so dune considers the rule up to date: `dune build
+@bench` succeeds, measuring nothing and printing nothing ([running the
+benchmarks again](running-checks.md#running-the-benchmarks-again)).
+`--force` measures again, and every case passes:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune build @bench
-digest: 3 cases vs digest.thumper for machine 5c1e0a7f3b9d2486
+$ dune build @bench --force
+digest: 3 cases vs digest.thumper for machine 943935ae6b4f79ac
 
-  passed  199.25 ns  ±0.6%  4 w  md5/string-64
-  passed    6.55 ns  ±0.4%  0 w  fib/10
-  passed   10.83 ns  ±0.2%  0 w  fib/20
+  passed  197.52 ns  ±1.2%  4 w  md5/string-64
+      +3.3% [+1.8, +4.5]  budget +5%
+  passed    6.41 ns  ±0.6%  0 w  fib/10
+      -1.0% [-2.8, +0.5]  budget +5%
+  passed   10.70 ns  ±0.9%  0 w  fib/20
 
-3 passed in 0.9s.
+3 passed in 767ms.
 ```
 
 ## Where to go next

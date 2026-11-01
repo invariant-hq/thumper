@@ -77,23 +77,21 @@ argument is `bless`, and checks otherwise. Its first run finds no
 `programmatic.thumper`, so every metric is proposed, and its `bless`
 records the file:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/programmatic.exe
-rev: 1400.2 ns, 3000 w
-sum: 2888.9 ns, 0 w
-{"overall":"pass","machine":"5c1e0a7f3b9d2486","summary":{"wall_time":{"n_improved":0,"n_regressed":0,"n_equivalent":0,"n_inconclusive":2,"geomean_delta":null},"alloc_words":{"n_improved":0,"n_regressed":0,"n_equivalent":0,"n_inconclusive":2,"geomean_delta":null}},"cases":[{"id":"rev","full_name":"rev","overall":"pass","metrics":[{"metric":"wall_time","relation":null,"status":"pass","reason":"missing_baseline","delta":null,"lower_delta":null,"upper_delta":null},{"metric":"alloc_words","relation":null,"status":"pass","reason":"missing_baseline","delta":null,"lower_delta":null,"upper_delta":null}]},{"id":"sum","full_name":"sum","overall":"pass","metrics":[{"metric":"wall_time","relation":null,"status":"pass","reason":"missing_baseline","delta":null,"lower_delta":null,"upper_delta":null},{"metric":"alloc_words","relation":null,"status":"pass","reason":"missing_baseline","delta":null,"lower_delta":null,"upper_delta":null}]}]}
+rev: 1330.7 ns, 3000 w
+sum: 2672.3 ns, 0 w
+{"overall":"pass","machine":"943935ae6b4f79ac","summary":{"wall_time":{"n_improved":0,"n_regressed":0,"n_equivalent":0,"n_inconclusive":2,"geomean_delta":null},"alloc_words":{"n_improved":0,"n_regressed":0,"n_equivalent":0,"n_inconclusive":2,"geomean_delta":null}},"cases":[{"id":"rev","full_name":"rev","overall":"pass","metrics":[{"metric":"wall_time","relation":null,"status":"pass","reason":"missing_baseline","delta":null,"lower_delta":null,"upper_delta":null},{"metric":"alloc_words","relation":null,"status":"pass","reason":"missing_baseline","delta":null,"lower_delta":null,"upper_delta":null}]},{"id":"sum","full_name":"sum","overall":"pass","metrics":[{"metric":"wall_time","relation":null,"status":"pass","reason":"missing_baseline","delta":null,"lower_delta":null,"upper_delta":null},{"metric":"alloc_words","relation":null,"status":"pass","reason":"missing_baseline","delta":null,"lower_delta":null,"upper_delta":null}]}]}
 $ dune exec bench/programmatic.exe -- bless
 ```
 
 The next run compares both cases with the baseline:
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/programmatic.exe
-rev: 1388.0 ns, 3000 w
-sum: 2890.4 ns, 0 w
-{"overall":"pass","machine":"5c1e0a7f3b9d2486","summary":{"wall_time":{"n_improved":0,"n_regressed":0,"n_equivalent":2,"n_inconclusive":0,"geomean_delta":0.0021738071102339312},"alloc_words":{"n_improved":0,"n_regressed":0,"n_equivalent":2,"n_inconclusive":0,"geomean_delta":0}},"cases":[{"id":"rev","full_name":"rev","overall":"pass","metrics":[{"metric":"wall_time","relation":"equivalent","status":"pass","reason":null,"confirmed":false,"n":20,"delta":0.0032840018410610308,"lower_delta":-0.0047659712987588371,"upper_delta":0.0097920931131736551},{"metric":"alloc_words","relation":"equivalent","status":"pass","reason":null,"exact":true,"delta":0,"lower_delta":null,"upper_delta":null}]},{"id":"sum","full_name":"sum","overall":"pass","metrics":[{"metric":"wall_time","relation":"equivalent","status":"pass","reason":null,"confirmed":false,"n":20,"delta":0.0010655784985170982,"lower_delta":-0.0034913996618063164,"upper_delta":0.0082457452134682814},{"metric":"alloc_words","relation":"equivalent","status":"pass","reason":null,"exact":true,"delta":0,"lower_delta":null,"upper_delta":null}]}]}
+rev: 1339.1 ns, 3000 w
+sum: 2731.8 ns, 0 w
+{"overall":"pass","machine":"943935ae6b4f79ac","summary":{"wall_time":{"n_improved":0,"n_regressed":0,"n_equivalent":2,"n_inconclusive":0,"geomean_delta":0.015757883205358869},"alloc_words":{"n_improved":0,"n_regressed":0,"n_equivalent":2,"n_inconclusive":0,"geomean_delta":0}},"cases":[{"id":"rev","full_name":"rev","overall":"pass","metrics":[{"metric":"wall_time","relation":"equivalent","status":"pass","reason":null,"confirmed":false,"n":20,"delta":0.017645398619172789,"lower_delta":0.0056334209226855834,"upper_delta":0.024285528555220516},{"metric":"alloc_words","relation":"equivalent","status":"pass","reason":null,"exact":true,"delta":0,"lower_delta":null,"upper_delta":null}]},{"id":"sum","full_name":"sum","overall":"pass","metrics":[{"metric":"wall_time","relation":"equivalent","status":"pass","reason":null,"confirmed":false,"n":20,"delta":0.013873868730518884,"lower_delta":0.0052577979515841229,"upper_delta":0.022026303538176105},{"metric":"alloc_words","relation":"equivalent","status":"pass","reason":null,"exact":true,"delta":0,"lower_delta":null,"upper_delta":null}]}]}
 $ echo $?
 0
 ```

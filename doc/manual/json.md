@@ -13,30 +13,29 @@ with `--json` prints its report and writes the document, which `jq .` prints
 indented. The transcript runs `examples/02-getting-started` as a project's
 `bench/` directory, and its numbers are one run's.
 
-<!-- placeholder: Q1 regenerates this transcript -->
 ```
 $ dune exec bench/bench_digest.exe -- --json verdict.json
-digest: 3 cases vs bench/digest.thumper for machine 5c1e0a7f3b9d2486
+digest: 3 cases vs bench/digest.thumper for machine 943935ae6b4f79ac
 
-  passed     199.31 ns  ±0.5%  4 w  md5/string-64
-  REGRESSED   13.07 ns  ±0.3%  0 w  fib/10
-      +99.5% [+99.1, +99.9]  budget +5%
-  REGRESSED   21.63 ns  ±0.2%  0 w  fib/20
-      +99.7% [+99.5, +99.9]  budget +5%
+  passed     193.43 ns  ±0.2%  4 w  md5/string-64
+  REGRESSED   10.92 ns  ±0.9%  0 w  fib/10
+      +67.9% [+64.6, +70.8]  budget +5%
+  REGRESSED   19.27 ns  ±0.1%  0 w  fib/20
+      +81.1% [+80.4, +81.6]  budget +5%
 
 rerun: ./_build/default/bench/bench_digest.exe -f fib/10 -f fib/20
-1 passed, 2 regressed in 1.6s.
+1 passed, 2 regressed in 1.7s.
 $ jq . verdict.json
 {
   "overall": "fail",
-  "machine": "5c1e0a7f3b9d2486",
+  "machine": "943935ae6b4f79ac",
   "summary": {
     "wall_time": {
       "n_improved": 0,
       "n_regressed": 2,
       "n_equivalent": 1,
       "n_inconclusive": 0,
-      "geomean_delta": 0.58542731007104836
+      "geomean_delta": 0.45407256345798386
     },
     "alloc_words": {
       "n_improved": 0,
@@ -59,9 +58,9 @@ $ jq . verdict.json
           "reason": null,
           "confirmed": false,
           "n": 20,
-          "delta": 0.0011502637185300993,
-          "lower_delta": -0.0041872040278521814,
-          "upper_delta": 0.0063918421729071081
+          "delta": 0.010973836473850428,
+          "lower_delta": 0.0013201818866642051,
+          "upper_delta": 0.021520279930712521
         },
         {
           "metric": "alloc_words",
@@ -87,9 +86,9 @@ $ jq . verdict.json
           "reason": null,
           "confirmed": true,
           "n": 20,
-          "delta": 0.99512195121951219,
-          "lower_delta": 0.99105691056910572,
-          "upper_delta": 0.99898373983739841
+          "delta": 0.67895189669347156,
+          "lower_delta": 0.6464669790895109,
+          "upper_delta": 0.70806612201482599
         },
         {
           "metric": "alloc_words",
@@ -115,9 +114,9 @@ $ jq . verdict.json
           "reason": null,
           "confirmed": true,
           "n": 20,
-          "delta": 0.99722735674676528,
-          "lower_delta": 0.99537892791127547,
-          "upper_delta": 0.99907578558225507
+          "delta": 0.81125697091011739,
+          "lower_delta": 0.80438437112947914,
+          "upper_delta": 0.81557997217718015
         },
         {
           "metric": "alloc_words",
