@@ -73,10 +73,25 @@ let replace ~sub ~by s =
   go 0;
   Buffer.contents b
 
+(* This executable's path, absolute and without [.] segments. Outside Linux
+   and macOS [Sys.executable_name] is [argv.(0)], [./test_cli.exe] under
+   dune, which resolves against the directory the test started in, as
+   [main] resolves it. *)
+let exe =
+  let path =
+    if Filename.is_relative Sys.executable_name then
+      Filename.concat (Sys.getcwd ()) Sys.executable_name
+    else Sys.executable_name
+  in
+  "/"
+  ^ String.concat "/"
+      (List.filter
+         (fun s -> s <> "" && s <> ".")
+         (String.split_on_char '/' path))
+
 (* The build context this executable runs in, as [INSIDE_DUNE] names it:
    [test/unit/test_cli.exe] lies under it. *)
-let exe_context =
-  Filename.dirname (Filename.dirname (Filename.dirname Sys.executable_name))
+let exe_context = Filename.dirname (Filename.dirname (Filename.dirname exe))
 
 (* The workspace, when the build directory is [_build]. *)
 let workspace =
@@ -725,7 +740,7 @@ let resolves (_, p) =
     (main ~name:"absent/digest" ~baseline:p.baseline ("bless" :: args));
   expect (printed dir) p.expected
 
-(* [main] passes [Sys.executable_name], which a test cannot choose, so the
+(* [main] passes the executable's own path, which a test cannot choose, so the
    layouts of other executables are mapped by the function itself. *)
 let layouts =
   [

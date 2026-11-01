@@ -9,7 +9,7 @@
     system, and composes {!Check}, {!Verdict}, {!Baseline} and {!Env} around
     them, and prints the reports {!Report} builds. {!default_baseline_dir} is
     the pure function that places the default baseline; {!main} applies it to
-    the environment and to [Sys.executable_name].
+    the environment and to the executable's path.
 
     The facade re-exports none of these values: [Thumper.run] calls {!main}, and
     the module is otherwise visible only as [Thumper.Private.Cli], outside the
@@ -106,7 +106,9 @@ val main :
     + It resolves the baseline path: [--baseline], else [baseline], else
       [<name>.thumper] in {!default_baseline_dir}'s directory. It passes that
       function [INSIDE_DUNE], [DUNE_SOURCEROOT] and [Sys.executable_name], not
-      [argv.(0)].
+      [argv.(0)]. Where the runtime cannot find the executable (outside Linux
+      and macOS), [Sys.executable_name] is [argv.(0)], and a relative one is
+      made absolute against the working directory the program started in.
     + It removes the [--json] file; a file it cannot remove stops the run. It
       stops when the directory of the [--json] file, or under [bless] that of
       the baseline, is not a writable directory.

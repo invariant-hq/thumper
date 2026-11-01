@@ -917,6 +917,18 @@ let help_text exe =
            ];
        ])
 
+(* The running executable's path, absolute. Outside Linux and macOS the
+   runtime cannot find the executable, and [Sys.executable_name] is
+   [argv.(0)]: [./bench.exe] when the program was started so. It resolves
+   against the working directory the program started in, read here, at
+   initialisation, since the program may change directory before [main]. *)
+let executable =
+  if Filename.is_relative Sys.executable_name then
+    match Sys.getcwd () with
+    | cwd -> Filename.concat cwd Sys.executable_name
+    | exception Sys_error _ -> Sys.executable_name
+  else Sys.executable_name
+
 let main ?baseline ?config ?budgets ~argv ~name benches =
   Baseline.check_suite ~fname:"Thumper.run" name;
   validate_budgets budgets;
@@ -957,7 +969,7 @@ let main ?baseline ?config ?budgets ~argv ~name benches =
                   | exception Sys_error _ -> false
                 in
                 default_baseline_dir ~dir_exists ~inside_dune ~source_root
-                  ~exe:Sys.executable_name ~cwd
+                  ~exe:executable ~cwd
               in
               let file = name ^ ".thumper" in
               if String.equal dir cwd then
