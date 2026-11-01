@@ -31,9 +31,37 @@ let drain r =
   loop ();
   Buffer.contents b
 
-(* More than a pipe holds, and more than one of [Unix.write]'s 64 KiB
-   chunks. *)
-let long = String.init (1 lsl 18) (fun i -> Char.chr (i land 0xff))
+(* Fills the non-blocking [w] until it refuses a byte, 4 KiB at a time and
+   then a byte at a time, and is the number of bytes it took. *)
+let fill w =
+  let block = String.make 4096 'x' in
+  let rec go n len =
+    match Unix.single_write_substring w block 0 len with
+    | k -> go (n + k) len
+    | exception Unix.Unix_error ((Unix.EAGAIN | Unix.EWOULDBLOCK), _, _) ->
+        if len = 1 then n else go n 1
+  in
+  go 0 (String.length block)
+
+(* The bytes an empty pipe takes, measured: 64 KiB on most hosts, but Linux
+   gives a pipe sixteen pages, 1 MiB under ppc64le's 64 KiB pages. *)
+let pipe_capacity =
+  lazy
+    (let r, w = Unix.pipe ~cloexec:true () in
+     Unix.set_nonblock w;
+     Fun.protect
+       ~finally:(fun () ->
+         Unix.close r;
+         Unix.close w)
+       (fun () -> fill w))
+
+(* More than a pipe holds, four times over, and more than one of
+   [Unix.write]'s 64 KiB chunks: never under 256 KiB. *)
+let long =
+  lazy
+    (String.init
+       (max (1 lsl 18) (4 * Lazy.force pipe_capacity))
+       (fun i -> Char.chr (i land 0xff)))
 
 (* [draining r got f] runs [f] while a [SIGALRM] every millisecond empties [r]
    into [got], and is the number of alarms. The handler ignores an alarm that
@@ -89,6 +117,7 @@ let written s =
 let a_full_pipe_holds_a_prefix () =
   if Sys.win32 then skip ~reason:"no non-blocking pipes" ()
   else
+    let long = Lazy.force long in
     let r, w = pipe () in
     Unix.set_nonblock w;
     raises_match
@@ -106,14 +135,7 @@ let an_interrupted_write_restarts () =
   else
     let r, w = pipe () in
     Unix.set_nonblock w;
-    let block = String.make 4096 'x' in
-    let rec fill n len =
-      match Unix.single_write_substring w block 0 len with
-      | k -> fill (n + k) len
-      | exception Unix.Unix_error ((Unix.EAGAIN | Unix.EWOULDBLOCK), _, _) ->
-          if len = 1 then n else fill n 1
-    in
-    let filled = fill 0 (String.length block) in
+    let filled = fill w in
     Unix.clear_nonblock w;
     let got = Buffer.create 65536 in
     let alarms = draining r got (fun () -> Os.write_all w "restarted") in
@@ -125,6 +147,7 @@ let an_interrupted_write_restarts () =
 let an_interrupted_long_write_writes_each_byte_once () =
   if Sys.win32 then skip ~reason:"no signals" ()
   else
+    let long = Lazy.force long in
     let r, w = pipe () in
     let got = Buffer.create (String.length long) in
     (try ignore (draining r got (fun () -> Os.write_all w long))
