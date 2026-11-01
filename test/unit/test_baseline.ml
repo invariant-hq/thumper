@@ -1238,6 +1238,316 @@ let a_partial_record_keeps_every_other_line (t, id, trial) =
   in
   equal (list string) (other_lines id (printed t)) (other_lines id (printed t'))
 
+(* Sequences of records, against a model of the file that follows record's
+   contract step by step, the bytes a kept row keeps included. *)
+
+module Model = struct
+  (* [zeros] counts the leading zeros that respellings gave a row's count or
+     [batch=], which the row keeps until a record replaces it. *)
+  type row = { evidence : Baseline.evidence; zeros : int }
+
+  type section = {
+    host : string;
+    ocaml : string;
+    annotations : string list;
+    rows : ((string * string) * row) list; (* in ascending (id, metric) *)
+  }
+
+  type t = { suite : string option; sections : (string * section) list }
+
+  let empty suite = { suite; sections = [] }
+
+  let row k = function
+    | Run.Exact n -> { evidence = Baseline.Exact_int n; zeros = 0 }
+    | Run.Samples s ->
+        let stored x = float_of_string (Printf.sprintf "%.3e" x) in
+        {
+          evidence = Baseline.Sampled { k; samples = Array.map stored s.sorted };
+          zeros = 0;
+        }
+
+  let rows_of run =
+    List.concat_map
+      (fun (id, trial) ->
+        List.map
+          (fun (m, x) -> ((id, Metric.id m), row (Run.Trial.k trial) x))
+          (Run.Trial.measurements trial))
+      (Run.trials run)
+
+  let by_key rows = List.sort (fun (a, _) (b, _) -> compare a b) rows
+
+  let reserved a =
+    List.exists
+      (fun word -> String.starts_with ~prefix:word a)
+      [ "machine:"; "host:"; "ocaml:"; "suite:" ]
+
+  let has_respelled rows = List.exists (fun (_, r) -> r.zeros > 0) rows
+
+  let record (identity : Baseline.identity) annotations suite selection run m =
+    let other_suite =
+      match m.suite with Some s -> not (String.equal s suite) | None -> false
+    in
+    if other_suite || List.exists reserved annotations then begin
+      cover "a record is refused" true;
+      invalid_arg "Baseline.record"
+    end;
+    let ids = Run.case_ids run in
+    let previous = List.assoc_opt identity.machine m.sections in
+    let others = List.remove_assoc identity.machine m.sections in
+    cover "a record keeps a respelled row of another section"
+      (List.exists (fun (_, s) -> has_respelled s.rows) others);
+    let section =
+      match (selection, previous) with
+      | `Partial, Some s when String.equal s.ocaml identity.ocaml ->
+          let kept =
+            List.filter (fun ((id, _), _) -> not (List.mem id ids)) s.rows
+          in
+          cover "a partial record keeps a respelled row of its section"
+            (has_respelled kept);
+          cover "a partial record keeps a row and replaces another"
+            (kept <> [] && List.length kept < List.length s.rows);
+          {
+            s with
+            annotations = s.annotations @ annotations;
+            rows = by_key (kept @ rows_of run);
+          }
+      | selection, previous ->
+          cover "a partial record replaces a stale section"
+            (selection = `Partial && previous <> None);
+          cover "a full record drops the rows of a case the run lacks"
+            (match previous with
+            | Some s ->
+                selection = `Full
+                && List.exists
+                     (fun ((id, _), _) -> not (List.mem id ids))
+                     s.rows
+            | None -> false);
+          {
+            host = identity.host;
+            ocaml = identity.ocaml;
+            annotations;
+            rows = by_key (rows_of run);
+          }
+    in
+    {
+      suite = Some suite;
+      sections =
+        List.sort
+          (fun (a, _) (b, _) -> String.compare a b)
+          ((identity.machine, section) :: others);
+    }
+
+  let respell m =
+    let pad (key, r) = (key, { r with zeros = r.zeros + 1 }) in
+    {
+      m with
+      sections =
+        List.map
+          (fun (k, s) -> (k, { s with rows = List.map pad s.rows }))
+          m.sections;
+    }
+
+  let frozen_k s id =
+    List.find_map
+      (fun ((id', _), r) ->
+        match r.evidence with
+        | Baseline.Sampled { k; _ } when String.equal id id' -> Some k
+        | _ -> None)
+      s.rows
+end
+
+(* [t]'s text with one more leading zero on every row's count or [batch=],
+   read back: a spelling a hand edit may give, which of_string accepts and
+   keeps. *)
+let respelled t =
+  let pad line =
+    match String.split_on_char '\t' line with
+    | [ id; metric; "exact"; n ] ->
+        String.concat "\t" [ id; metric; "exact"; "0" ^ n ]
+    | id :: metric :: batch :: rest
+      when String.starts_with ~prefix:"batch=" batch ->
+        String.concat "\t"
+          (id :: metric
+          :: ("batch=0" ^ String.sub batch 6 (String.length batch - 6))
+          :: rest)
+    | _ -> line
+  in
+  parsed
+    (String.concat "\n" (List.map pad (String.split_on_char '\n' (printed t))))
+
+(* The header lines below [# machine: key] and the row lines of [key]'s
+   section in [text]. *)
+let section_lines text key =
+  let rec skip = function
+    | [] -> ([], [])
+    | l :: rest when String.equal l ("# machine: " ^ key) -> header [] rest
+    | _ :: rest -> skip rest
+  and header acc = function
+    | "" :: rest -> (List.rev acc, rows [] rest)
+    | l :: rest -> header (l :: acc) rest
+    | [] -> (List.rev acc, [])
+  and rows acc = function
+    | l :: rest when l <> "" && l.[0] <> '#' -> rows (l :: acc) rest
+    | _ -> List.rev acc
+  in
+  skip (String.split_on_char '\n' text)
+
+let row_key line =
+  match String.split_on_char '\t' line with
+  | id :: metric :: _ -> (id, metric)
+  | _ -> failf "not a row: %S" line
+
+(* A row line's fields up to its count, or up to its [batch=]. *)
+let spelling line =
+  match String.split_on_char '\t' line with
+  | id :: metric :: "exact" :: n :: _ ->
+      String.concat "\t" [ id; metric; "exact"; n ]
+  | id :: metric :: batch :: _ -> String.concat "\t" [ id; metric; batch ]
+  | _ -> failf "not a row: %S" line
+
+(* The invariant: [t] reads as the model, through the observers and through
+   its printed text, and prints to a text that of_string reads back. *)
+let agrees_with_the_model (m : Model.t) t =
+  let text = printed t in
+  equal ~msg:"suite" (option string) m.suite (Baseline.suite t);
+  equal ~msg:"machines" (list string) (List.map fst m.sections)
+    (Baseline.machines t);
+  equal ~msg:"read back" string text (reprinted text);
+  List.iter
+    (fun (key, (s : Model.section)) ->
+      let sec = section t key in
+      let header, rows = section_lines text key in
+      equal ~msg:"ocaml_of" string s.ocaml (Baseline.ocaml_of sec);
+      equal ~msg:("header of " ^ key) (list string)
+        (("# host: " ^ s.host) :: ("# ocaml: " ^ s.ocaml)
+        :: List.map (( ^ ) "# ") s.annotations)
+        header;
+      equal ~msg:("rows of " ^ key)
+        (list (pair string string))
+        (List.map fst s.rows) (List.map row_key rows);
+      List.iter
+        (fun (((id, metric) as k), (r : Model.row)) ->
+          equal
+            ~msg:(Printf.sprintf "evidence of %s %s" id metric)
+            (option evidence) (Some r.evidence) (evidence_of t key k))
+        s.rows;
+      equal
+        ~msg:("spelling of " ^ key ^ "'s rows")
+        (list string)
+        (List.map
+           (fun ((id, metric), (r : Model.row)) ->
+             let zeros = String.make r.zeros '0' in
+             match r.evidence with
+             | Baseline.Exact_int n ->
+                 String.concat "\t"
+                   [ id; metric; "exact"; zeros ^ string_of_int n ]
+             | Baseline.Sampled { k; _ } ->
+                 String.concat "\t"
+                   [ id; metric; "batch=" ^ zeros ^ string_of_int k ])
+           s.rows)
+        (List.map spelling rows);
+      List.iter
+        (fun ((id, _), _) ->
+          equal ~msg:("case_frozen_k " ^ id) (option int) (Model.frozen_k s id)
+            (Baseline.case_frozen_k sec ~id))
+        s.rows)
+    m.sections
+
+let baseline = abstract "f" ~invariant:agrees_with_the_model
+
+let identity_t =
+  Gen.with_pp
+    (fun ppf (i : Baseline.identity) ->
+      Format.fprintf ppf "%s/%s/%s" i.machine i.host i.ocaml)
+    (let open Gen in
+     let* machine = of_list [ "m1"; "m2" ] in
+     let* host = of_list [ "h1"; "h2" ] in
+     let+ ocaml = of_list [ "5.4"; "5.5" ] in
+     { Baseline.machine; host; ocaml })
+
+let annotations_t =
+  Gen.of_list
+    ~pp:(Testable.pp (list string))
+    [
+      [];
+      [];
+      [];
+      [];
+      [];
+      [ "forced: load 7.9/8" ];
+      [ "note"; "forced" ];
+      [ "host: x" ];
+    ]
+
+let suite_t =
+  Gen.of_list ~pp:Format.pp_print_string
+    [ "s"; "s"; "s"; "s"; "s"; "s"; "s"; "t" ]
+
+let selection_t =
+  Gen.of_list
+    ~pp:(fun ppf s ->
+      Format.pp_print_string ppf
+        (match s with `Full -> "`Full" | `Partial -> "`Partial"))
+    [ `Full; `Partial ]
+
+let pp_trial ppf (id, trial) =
+  let pp_m ppf (m, x) =
+    match x with
+    | Run.Exact n -> Format.fprintf ppf "%s=%d" (Metric.id m) n
+    | Run.Samples s ->
+        Format.fprintf ppf "%s=[%s]" (Metric.id m)
+          (String.concat " "
+             (List.map (Printf.sprintf "%.3e") (Array.to_list s.sorted)))
+  in
+  Format.fprintf ppf "%s k=%d %a" id (Run.Trial.k trial)
+    (Format.pp_print_list ~pp_sep:Format.pp_print_space pp_m)
+    (Run.Trial.measurements trial)
+
+(* Case ids that sort apart by one byte, [.] before [/]. *)
+let run_t =
+  Gen.with_pp
+    (fun ppf run ->
+      Format.fprintf ppf "[%a]"
+        (Format.pp_print_list
+           ~pp_sep:(fun ppf () -> Format.pp_print_string ppf "; ")
+           pp_trial)
+        (Run.trials run))
+    (let open Gen in
+     let* ids =
+       map
+         (List.sort_uniq String.compare)
+         (list ~size:(int_range 0 3) (of_list [ "a"; "a.b"; "a/b"; "b" ]))
+     in
+     let+ trials = list ~size:(constant (List.length ids)) gen_trial in
+     Run.create (List.combine ids trials))
+
+let record_commands =
+  let record =
+    command "record"
+      (identity_t @-> annotations_t @-> suite_t @-> selection_t @-> run_t
+     @-> baseline ^-> makes baseline)
+      Model.record
+      (fun identity annotations suite selection run t ->
+        Baseline.record ~annotations ~identity ~suite ~selection ~run t)
+  and respell =
+    command "respell" (baseline ^-> makes baseline) Model.respell respelled
+  in
+  [
+    command "empty"
+      (Gen.unit @-> makes baseline)
+      (fun () -> Model.empty (Some "s"))
+      (fun () -> empty);
+    command "parse_empty"
+      (Gen.unit @-> makes baseline)
+      (fun () -> Model.empty None)
+      (fun () -> parsed "");
+    record;
+    record;
+    record;
+    respell;
+    respell;
+  ]
+
 let recording =
   group "Recording"
     [
@@ -1331,6 +1641,8 @@ let recording =
           equal string
             (printed (with_section "key" rows_a empty))
             (printed (record `Partial (parsed ""))));
+      stateful ~count:300 ~steps:30
+        "a sequence of records agrees with a model of the file" record_commands;
     ]
 
 let () =
