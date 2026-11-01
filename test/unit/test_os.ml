@@ -43,25 +43,16 @@ let fill w =
   in
   go 0 (String.length block)
 
-(* The bytes an empty pipe takes, measured: 64 KiB on most hosts, but Linux
-   gives a pipe sixteen pages, 1 MiB under ppc64le's 64 KiB pages. *)
-let pipe_capacity =
-  lazy
-    (let r, w = Unix.pipe ~cloexec:true () in
-     Unix.set_nonblock w;
-     Fun.protect
-       ~finally:(fun () ->
-         Unix.close r;
-         Unix.close w)
-       (fun () -> fill w))
-
-(* More than a pipe holds, four times over, and more than one of
-   [Unix.write]'s 64 KiB chunks: never under 256 KiB. *)
+(* Four times what an empty pipe takes, measured: Linux gives a pipe sixteen
+   pages, 64 KiB on most hosts but 1 MiB under ppc64le's 64 KiB pages. *)
 let long =
   lazy
-    (String.init
-       (max (1 lsl 18) (4 * Lazy.force pipe_capacity))
-       (fun i -> Char.chr (i land 0xff)))
+    (let r, w = pipe () in
+     Unix.set_nonblock w;
+     let capacity = fill w in
+     Unix.close r;
+     Unix.close w;
+     String.init (4 * capacity) (fun i -> Char.chr (i land 0xff)))
 
 (* [draining r got f] runs [f] while a [SIGALRM] every millisecond empties [r]
    into [got], and is the number of alarms. The handler ignores an alarm that
