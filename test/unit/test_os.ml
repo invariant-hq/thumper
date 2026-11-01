@@ -54,33 +54,53 @@ let long =
      Unix.close w;
      String.init (4 * capacity) (fun i -> Char.chr (i land 0xff)))
 
-(* [draining r got f] runs [f] while a [SIGALRM] every millisecond empties [r]
-   into [got], and is the number of alarms. The handler ignores an alarm that
-   lands while it runs, so the bytes keep their order, and raises [Exit] at the
-   thirty-first, ten times what a correct write needs, so a write that never
-   finishes ends. *)
+(* What a [SIGUSR1] does. The handler is installed once and never removed,
+   and does nothing outside [draining], so a signal that lands after a test
+   is harmless. [SIGALRM] is windtrap's: its runner times each test with
+   it. *)
+let on_usr1 = ref ignore
+
+let usr1_handler =
+  lazy (Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> !on_usr1 ())))
+
+(* [draining r got f] runs [f] while a child process signals this one every
+   millisecond, and each signal empties [r] into [got]; it is the number of
+   signals. The handler ignores a signal that lands while it runs, so the
+   bytes keep their order, and raises [Exit] at the thirty-first, ten times
+   what a correct write needs, so a write that never finishes ends. *)
 let draining r got f =
-  let alarms = ref 0 and busy = ref false in
-  let on_alarm _ =
-    incr alarms;
-    if !alarms > 30 then raise Exit;
-    if not !busy then begin
-      busy := true;
-      Buffer.add_string got (drain r);
-      busy := false
-    end
+  Lazy.force usr1_handler;
+  let signals = ref 0 and busy = ref false in
+  (on_usr1 :=
+     fun () ->
+       incr signals;
+       if !signals > 30 then raise Exit;
+       if not !busy then begin
+         busy := true;
+         Buffer.add_string got (drain r);
+         busy := false
+       end);
+  let parent = Unix.getpid () in
+  let child =
+    match Unix.fork () with
+    | 0 ->
+        (try
+           while true do
+             Unix.sleepf 0.001;
+             Unix.kill parent Sys.sigusr1
+           done
+         with _ -> ());
+        Unix._exit 0
+    | pid -> pid
   in
-  let timer v = { Unix.it_interval = v; it_value = v } in
-  let previous = Sys.signal Sys.sigalrm (Sys.Signal_handle on_alarm) in
   Fun.protect
     ~finally:(fun () ->
-      ignore (Unix.setitimer Unix.ITIMER_REAL (timer 0.));
-      Sys.set_signal Sys.sigalrm previous)
-    (fun () ->
-      ignore (Unix.setitimer Unix.ITIMER_REAL (timer 0.001));
-      f ());
+      on_usr1 := ignore;
+      Unix.kill child Sys.sigkill;
+      ignore (Unix.waitpid [] child))
+    f;
   Buffer.add_string got (drain r);
-  !alarms
+  !signals
 
 (* monotonic_s *)
 
@@ -119,7 +139,7 @@ let a_full_pipe_holds_a_prefix () =
     equal string (String.sub long 0 (String.length got)) got
 
 (* The pipe is full to the last byte, so a write of fewer than [PIPE_BUF]
-   bytes, which the pipe takes whole or not at all, blocks until an alarm
+   bytes, which the pipe takes whole or not at all, blocks until a signal
    interrupts it, and goes through once the handler has emptied the pipe. *)
 let an_interrupted_write_restarts () =
   if Sys.win32 then skip ~reason:"no signals" ()
@@ -129,11 +149,11 @@ let an_interrupted_write_restarts () =
     let filled = fill w in
     Unix.clear_nonblock w;
     let got = Buffer.create 65536 in
-    let alarms = draining r got (fun () -> Os.write_all w "restarted") in
-    at_least int ~than:1 alarms;
+    let signals = draining r got (fun () -> Os.write_all w "restarted") in
+    at_least int ~than:1 signals;
     equal string (String.make filled 'x' ^ "restarted") (Buffer.contents got)
 
-(* The string spans several of the pipe's fills, so alarms interrupt the
+(* The string spans several of the pipe's fills, so signals interrupt the
    write after part of it went through. *)
 let an_interrupted_long_write_writes_each_byte_once () =
   if Sys.win32 then skip ~reason:"no signals" ()
