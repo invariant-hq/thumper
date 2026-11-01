@@ -54,53 +54,44 @@ let long =
      Unix.close w;
      String.init (4 * capacity) (fun i -> Char.chr (i land 0xff)))
 
-(* What a [SIGUSR1] does. The handler is installed once and never removed,
-   and does nothing outside [draining], so a signal that lands after a test
-   is harmless. [SIGALRM] is windtrap's: its runner times each test with
-   it. *)
-let on_usr1 = ref ignore
-
-let usr1_handler =
-  lazy (Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> !on_usr1 ())))
-
-(* [draining r got f] runs [f] while a child process signals this one every
-   millisecond, and each signal empties [r] into [got]; it is the number of
+(* [draining r got f] runs [f] while a child process sends a [SIGUSR1] every
+   millisecond, whose handler empties [r] into [got], and is the number of
    signals. The handler ignores a signal that lands while it runs, so the
    bytes keep their order, and raises [Exit] at the thirty-first, ten times
-   what a correct write needs, so a write that never finishes ends. *)
+   what a correct write needs, so a write that never finishes ends. It stays
+   installed but inert after [f], so a late signal does nothing. ([SIGALRM]
+   is windtrap's, whose runner times each test with it.) *)
 let draining r got f =
-  Lazy.force usr1_handler;
-  let signals = ref 0 and busy = ref false in
-  (on_usr1 :=
-     fun () ->
-       incr signals;
-       if !signals > 30 then raise Exit;
-       if not !busy then begin
-         busy := true;
-         Buffer.add_string got (drain r);
-         busy := false
-       end);
+  let signals = ref 0 and busy = ref false and active = ref true in
+  Sys.set_signal Sys.sigusr1
+    (Sys.Signal_handle
+       (fun _ ->
+         if !active then begin
+           incr signals;
+           if !signals > 30 then raise Exit;
+           if not !busy then begin
+             busy := true;
+             Buffer.add_string got (drain r);
+             busy := false
+           end
+         end));
   let parent = Unix.getpid () in
-  let child =
-    match Unix.fork () with
-    | 0 ->
-        (try
-           while true do
-             Unix.sleepf 0.001;
-             Unix.kill parent Sys.sigusr1
-           done
-         with _ -> ());
-        Unix._exit 0
-    | pid -> pid
-  in
-  Fun.protect
-    ~finally:(fun () ->
-      on_usr1 := ignore;
-      Unix.kill child Sys.sigkill;
-      ignore (Unix.waitpid [] child))
-    f;
-  Buffer.add_string got (drain r);
-  !signals
+  match Unix.fork () with
+  | 0 ->
+      (try
+         while true do
+           Unix.sleepf 0.001;
+           Unix.kill parent Sys.sigusr1
+         done
+       with Unix.Unix_error _ -> ());
+      Unix._exit 0
+  | child ->
+      Fun.protect f ~finally:(fun () ->
+          active := false;
+          Unix.kill child Sys.sigkill;
+          ignore (Unix.waitpid [] child));
+      Buffer.add_string got (drain r);
+      !signals
 
 (* monotonic_s *)
 

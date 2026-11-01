@@ -721,18 +721,10 @@ let a_permission_denied_file_is_io () =
       ("error cannot read " ^ path ^ ": Permission denied")
       (read_outcome path)
 
-(* What a [SIGUSR1] does. The handler is installed once and never removed,
-   and does nothing outside the test below, so a signal that lands after it
-   is harmless. [SIGALRM] is windtrap's: its runner times each test with
-   it. *)
-let on_usr1 = ref ignore
-
-let usr1_handler =
-  lazy (Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> !on_usr1 ())))
-
 (* A FIFO this test holds open for writing never ends, so [read] blocks until
-   a signal, which a child process sends every 0.1 s, raises in its
-   handler. *)
+   the one [SIGUSR1] that a child process sends after 0.1 s, whose handler
+   raises. ([SIGALRM] is windtrap's, whose runner times each test with
+   it.) *)
 let read_closes_its_descriptor_on_any_exception () =
   if Sys.win32 then skip ~reason:"no FIFO" ()
   else
@@ -743,30 +735,21 @@ let read_closes_its_descriptor_on_any_exception () =
       List.sort String.compare (Array.to_list (Sys.readdir "/dev/fd"))
     in
     let before = open_fds () in
-    Lazy.force usr1_handler;
-    (on_usr1 := fun () -> raise Exit);
+    Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> raise Exit));
     let parent = Unix.getpid () in
-    let child =
-      match Unix.fork () with
-      | 0 ->
-          (try
-             while true do
-               Unix.sleepf 0.1;
-               Unix.kill parent Sys.sigusr1
-             done
-           with _ -> ());
-          Unix._exit 0
-      | pid -> pid
-    in
-    Fun.protect
-      ~finally:(fun () ->
-        on_usr1 := ignore;
-        Unix.kill child Sys.sigkill;
-        ignore (Unix.waitpid [] child);
-        Unix.close writer)
-      (fun () ->
-        raises Exit (fun () -> Baseline.read path);
-        equal (list string) before (open_fds ()))
+    match Unix.fork () with
+    | 0 ->
+        Unix.sleepf 0.1;
+        Unix.kill parent Sys.sigusr1;
+        Unix._exit 0
+    | child ->
+        Fun.protect
+          ~finally:(fun () ->
+            ignore (Unix.waitpid [] child);
+            Unix.close writer)
+          (fun () ->
+            raises Exit (fun () -> Baseline.read path);
+            equal (list string) before (open_fds ()))
 
 let reading =
   group "Reading and printing"
