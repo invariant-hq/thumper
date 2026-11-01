@@ -1,5 +1,14 @@
 # Changes
 
+## v0.1.1 2026-11-01
+
+- On FreeBSD and the other systems where OCaml's `Sys.executable_name` is
+  the command line's `argv.(0)`, a relative executable path resolves against
+  the directory the program started in. A program that changed directory
+  before `Thumper.run` placed its default baseline as if started from there.
+- The test suite passes on Linux with 64 KiB pages, as on ppc64le, where a
+  pipe holds 1 MiB.
+
 ## v0.1.0 2026-11-01
 
 First release.
